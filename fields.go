@@ -46,19 +46,30 @@ const (
 )
 
 type Field interface {
+	Name() string
+	Value() string
+
 	Parse(value string)
 	Valid() bool
 	SetUnparsedValue(value string)
 }
 
 type HeaderField struct {
-	Name, Value   string
+	name, value   string
 	UnparsedValue string
 	Error         error
 }
 
+func (f *HeaderField) Name() string {
+	return f.name
+}
+
+func (f *HeaderField) Value() string {
+	return f.value
+}
+
 func (f *HeaderField) Parse(s string) {
-	switch f.Name {
+	switch f.name {
 	case FromFieldName, ResentFromFieldName, SenderFieldName, ReturnPathFieldName,
 		ResentSenderFieldName, ToFieldName, CcFieldName, BccFieldName, ReplyToFieldName,
 		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIdFieldName,
@@ -82,7 +93,7 @@ func (f *HeaderField) Parse(s string) {
 	default:
 		f.parseOther(s)
 	}
-	log.Printf("Parse: value = %q", f.Value)
+	log.Printf("Parse: value = %q", f.value)
 }
 
 func (f *HeaderField) parseText(s string) {
@@ -92,7 +103,7 @@ func (f *HeaderField) parseText(s string) {
 		p := NewParser(s)
 		t := p.Text()
 		if p.AtEnd() {
-			f.Value = trim(t)
+			f.value = trim(t)
 			h = true
 		}
 	}
@@ -101,13 +112,13 @@ func (f *HeaderField) parseText(s string) {
 		p := NewParser(simplify(s))
 		t := p.Text()
 		if p.AtEnd() {
-			f.Value = t
+			f.value = t
 			h = true
 		}
 	}
 
 	if (!h && strings.Contains(s, "=?") && strings.Contains(s, "?=")) ||
-		(strings.Contains(f.Value, "=?") && strings.Contains(f.Value, "?=")) {
+		(strings.Contains(f.value, "=?") && strings.Contains(f.value, "?=")) {
 		// common: Subject: =?ISO-8859-1?q?foo bar baz?=
 		// unusual, but seen: Subject: =?ISO-8859-1?q?foo bar?= baz
 		p1 := NewParser(simplify(s))
@@ -134,7 +145,7 @@ func (f *HeaderField) parseText(s string) {
 		p2 := NewParser(tmp.String())
 		t := simplify(p2.Text())
 		if p2.AtEnd() && !strings.Contains(t, "?=") {
-			f.Value = t
+			f.value = t
 			h = true
 		}
 	}
@@ -168,7 +179,12 @@ func (f *HeaderField) SetUnparsedValue(value string) {
 }
 
 type AddressField struct {
-	Name string
+	HeaderField
+}
+
+func NewAddressField(name string) *AddressField {
+	hf := HeaderField{name: name}
+	return &AddressField{hf}
 }
 
 func (f *AddressField) Parse(value string) {
@@ -182,7 +198,12 @@ func (f *AddressField) SetUnparsedValue(value string) {
 }
 
 type DateField struct {
-	Name string
+	HeaderField
+}
+
+func NewDateField() *DateField {
+	hf := HeaderField{name: DateFieldName}
+	return &DateField{hf}
 }
 
 func (f *DateField) Parse(value string) {
@@ -196,6 +217,12 @@ func (f *DateField) SetUnparsedValue(value string) {
 }
 
 type ContentType struct {
+	HeaderField
+}
+
+func NewContentType() *ContentType {
+	hf := HeaderField{name: ContentTypeFieldName}
+	return &ContentType{hf}
 }
 
 func (f *ContentType) Parse(value string) {
@@ -209,6 +236,12 @@ func (f *ContentType) SetUnparsedValue(value string) {
 }
 
 type ContentTransferEncoding struct {
+	HeaderField
+}
+
+func NewContentTransferEncoding() *ContentTransferEncoding {
+	hf := HeaderField{name: ContentTransferEncodingFieldName}
+	return &ContentTransferEncoding{hf}
 }
 
 func (f *ContentTransferEncoding) Parse(value string) {
@@ -222,6 +255,12 @@ func (f *ContentTransferEncoding) SetUnparsedValue(value string) {
 }
 
 type ContentDisposition struct {
+	HeaderField
+}
+
+func NewContentDisposition() *ContentDisposition {
+	hf := HeaderField{name: ContentDispositionFieldName}
+	return &ContentDisposition{hf}
 }
 
 func (f *ContentDisposition) Parse(value string) {
@@ -235,6 +274,12 @@ func (f *ContentDisposition) SetUnparsedValue(value string) {
 }
 
 type ContentLanguage struct {
+	HeaderField
+}
+
+func NewContentLanguage() *ContentLanguage {
+	hf := HeaderField{name: ContentLanguageFieldName}
+	return &ContentLanguage{hf}
 }
 
 func (f *ContentLanguage) Parse(value string) {
@@ -255,24 +300,24 @@ func NewHeaderFieldNamed(name string) Field {
 	case InReplyToFieldName, SubjectFieldName, CommentsFieldName, KeywordsFieldName,
 		ContentDescriptionFieldName, MimeVersionFieldName, ReceivedFieldName,
 		ContentLocationFieldName, ContentMd5FieldName, ListIdFieldName:
-		hf = &HeaderField{Name: n}
+		hf = &HeaderField{name: n}
 	case FromFieldName, ResentFromFieldName, SenderFieldName, ResentSenderFieldName,
 		ReturnPathFieldName, ReplyToFieldName, ToFieldName, CcFieldName, BccFieldName,
 		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIdFieldName,
 		ContentIdFieldName, ResentMessageIdFieldName, ReferencesFieldName:
-		hf = &AddressField{Name: n}
+		hf = NewAddressField(n)
 	case DateFieldName, OrigDateFieldName, ResentDateFieldName:
-		hf = &DateField{Name: n}
+		hf = NewDateField()
 	case ContentTypeFieldName:
-		hf = &ContentType{}
+		hf = NewContentType()
 	case ContentTransferEncodingFieldName:
-		hf = &ContentTransferEncoding{}
+		hf = NewContentTransferEncoding()
 	case ContentDispositionFieldName:
-		hf = &ContentDisposition{}
+		hf = NewContentDisposition()
 	case ContentLanguageFieldName:
-		hf = &ContentLanguage{}
+		hf = NewContentLanguage()
 	default:
-		hf = &HeaderField{Name: n}
+		hf = &HeaderField{name: n}
 	}
 
 	return hf
