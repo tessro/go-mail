@@ -58,6 +58,8 @@ type Message struct {
 func ReadMessage(rfc5322 string) (m *Message, err error) {
 	i := 0
 	h, err := ReadHeader(rfc5322[i:], HEADER_RFC5322)
-	log.Printf("header = %+v", h)
+	for _, f := range h.fields {
+		log.Printf("header: %s = %q", f.Name(), f.Value())
+	}
 	return m, nil
 }
