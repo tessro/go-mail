@@ -68,6 +68,10 @@ func (f *HeaderField) Value() string {
 	return f.value
 }
 
+// Every HeaderField subclass must define a parse() function that takes a
+// string \a s from a message and sets the field value(). This default function
+// handles fields that are not specially handled by subclasses using functions
+// like parseText().
 func (f *HeaderField) Parse(s string) {
 	switch f.name {
 	case FromFieldName, ResentFromFieldName, SenderFieldName, ReturnPathFieldName,
@@ -96,6 +100,8 @@ func (f *HeaderField) Parse(s string) {
 	log.Printf("Parse: value = %q", f.value)
 }
 
+// Parses the *text production from \a s, as modified to include encoded-words
+// by RFC 2047. This is used to parse the Subject and Comments fields.
 func (f *HeaderField) parseText(s string) {
 	h := false
 
@@ -155,21 +161,39 @@ func (f *HeaderField) parseText(s string) {
 	}
 }
 
+// Parses the Mime-Version field from \a s and resolutely ignores all problems
+// seen.
+//
+// Only version 1.0 is legal. Since vast numbers of spammers send other version
+// numbers, we replace other version numbers with 1.0 and a comment. Bayesian
+// analysis tools will probably find the comment to be a sure spam sign.
 func (f *HeaderField) parseMimeVersion(s string) {
 }
 
+// Parses the Content-Location header field in \a s and records the first
+// problem found.
 func (f *HeaderField) parseContentLocation(s string) {
 }
 
+// Tries to parses any (otherwise uncovered and presumably unstructured) field
+// in \a s, and records an error if it contains NULs or 8-bit characters.
 func (f *HeaderField) parseOther(s string) {
 }
 
+// Parses the Content-Base header field in \a s and records the first problem
+// found. Somewhat overflexibly assumes that if there is a colon, the URL is
+// absolute, so it accepts -:/asr as a valid URL.
 func (f *HeaderField) parseContentBase(s string) {
 }
 
+// Parses Errors-To field \a s. Stores localpart@domain if it looks like a
+// single address (and reasonably error-free) and an empty value if there's any
+// doubt what to store.
 func (f *HeaderField) parseErrorsTo(s string) {
 }
 
+// Returns true if this header field is valid (or unparsed, as is the case for
+// all unknown fields), and false if an error was detected during parsing.
 func (f *HeaderField) Valid() bool {
 	return f.Error == nil
 }
