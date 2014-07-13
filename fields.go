@@ -214,13 +214,6 @@ func NewAddressField(name string) *AddressField {
 func (f *AddressField) Parse(value string) {
 }
 
-func (f *AddressField) Valid() bool {
-	return true
-}
-
-func (f *AddressField) SetUnparsedValue(value string) {
-}
-
 type DateField struct {
 	HeaderField
 }
@@ -231,13 +224,6 @@ func NewDateField() *DateField {
 }
 
 func (f *DateField) Parse(value string) {
-}
-
-func (f *DateField) Valid() bool {
-	return true
-}
-
-func (f *DateField) SetUnparsedValue(value string) {
 }
 
 type ContentType struct {
@@ -252,13 +238,6 @@ func NewContentType() *ContentType {
 func (f *ContentType) Parse(value string) {
 }
 
-func (f *ContentType) Valid() bool {
-	return true
-}
-
-func (f *ContentType) SetUnparsedValue(value string) {
-}
-
 type ContentTransferEncoding struct {
 	HeaderField
 }
@@ -269,13 +248,6 @@ func NewContentTransferEncoding() *ContentTransferEncoding {
 }
 
 func (f *ContentTransferEncoding) Parse(value string) {
-}
-
-func (f *ContentTransferEncoding) Valid() bool {
-	return true
-}
-
-func (f *ContentTransferEncoding) SetUnparsedValue(value string) {
 }
 
 type ContentDisposition struct {
@@ -290,13 +262,6 @@ func NewContentDisposition() *ContentDisposition {
 func (f *ContentDisposition) Parse(value string) {
 }
 
-func (f *ContentDisposition) Valid() bool {
-	return true
-}
-
-func (f *ContentDisposition) SetUnparsedValue(value string) {
-}
-
 type ContentLanguage struct {
 	HeaderField
 }
@@ -307,13 +272,6 @@ func NewContentLanguage() *ContentLanguage {
 }
 
 func (f *ContentLanguage) Parse(value string) {
-}
-
-func (f *ContentLanguage) Valid() bool {
-	return true
-}
-
-func (f *ContentLanguage) SetUnparsedValue(value string) {
 }
 
 func NewHeaderFieldNamed(name string) Field {
