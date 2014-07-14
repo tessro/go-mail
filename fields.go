@@ -168,6 +168,22 @@ func (f *HeaderField) parseText(s string) {
 // numbers, we replace other version numbers with 1.0 and a comment. Bayesian
 // analysis tools will probably find the comment to be a sure spam sign.
 func (f *HeaderField) parseMimeVersion(s string) {
+	p := NewParser(s)
+	p.Comment()
+	v := p.DotAtom()
+	p.Comment()
+	c, err := decode(p.lc, "us-ascii")
+	if err != nil || strings.ContainsAny(c, "()\\") {
+		c = ""
+	}
+	if v != "1.0" || !p.AtEnd() {
+		c = "Note: Original mime-version had syntax problems"
+	}
+	result := "1.0"
+	if c != "" {
+		result += "(" + c + ")"
+	}
+	f.value = result
 }
 
 // Parses the Content-Location header field in \a s and records the first
@@ -178,6 +194,11 @@ func (f *HeaderField) parseContentLocation(s string) {
 // Tries to parses any (otherwise uncovered and presumably unstructured) field
 // in \a s, and records an error if it contains NULs or 8-bit characters.
 func (f *HeaderField) parseOther(s string) {
+	v, err := decode(s, "us-ascii")
+	if err != nil {
+		f.Error = err
+	}
+	f.value = v
 }
 
 // Parses the Content-Base header field in \a s and records the first problem

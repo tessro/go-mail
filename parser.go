@@ -2,13 +2,14 @@ package mail
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 
-	"code.google.com/p/go-charset/charset"
-	_ "code.google.com/p/go-charset/data"
+	"github.com/paulrosania/go-charset/charset"
+	_ "github.com/paulrosania/go-charset/data"
 )
 
 type parserState struct {
@@ -42,6 +43,28 @@ func NewParser(s string) *Parser {
 	return &Parser{str: s, parserState: st}
 }
 
+// Returns true if \a c belongs to the RFC 2822 'atext' production, and false
+// in all other circumstances.
+func isAtext(c byte) bool {
+	if c < 32 || c > 127 {
+		return false
+	}
+
+	if (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') {
+		return true
+	}
+
+	switch c {
+	case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '/', '=', '?', '^',
+		'_', '`', '{', '|', '}', '~':
+		return true
+	}
+
+	return false
+}
+
 // Moves pos() to the first nonwhitespace character after the current point.
 // If pos() points to nonwhitespace already, it is not moved.
 func (p *Parser) Whitespace() string {
@@ -55,6 +78,83 @@ func (p *Parser) Whitespace() string {
 	}
 
 	return out.String()
+}
+
+// Moves pos() past all comments and surrounding white space, and returns the
+// contents of the last comment.
+//
+// Returns a null string if there was no comment.
+func (p *Parser) Comment() string {
+	var buf bytes.Buffer
+	p.Whitespace()
+	for p.Present("(") {
+		buf.Truncate(0)
+		commentLevel := 1
+		for commentLevel > 0 && !p.AtEnd() {
+			c := p.NextChar()
+			switch c {
+			case '(':
+				if commentLevel > 0 {
+					buf.WriteByte(c)
+				}
+				commentLevel++
+			case ')':
+				commentLevel--
+				if commentLevel > 0 {
+					buf.WriteByte(c)
+				}
+			case '\\':
+				p.Step(1)
+				buf.WriteByte(p.NextChar())
+			default:
+				buf.WriteByte(c)
+			}
+			p.Step(1)
+		}
+		p.Whitespace()
+		p.lc = buf.String()
+	}
+	return buf.String()
+}
+
+// Returns a dot-atom, stepping past all relevant whitespace and comments.
+func (p *Parser) DotAtom() string {
+	result := p.Atom()
+	if result == "" {
+		return ""
+	}
+
+	done := false
+	for !done {
+		m := p.mark()
+		p.Comment()
+		p.require(".")
+		p.Comment()
+		a := p.Atom()
+		if a == "" {
+			p.err = errors.New("Trailing dot in dot-atom")
+		}
+		if p.Valid() {
+			result += "." + a
+		} else {
+			p.restore(m)
+			done = true
+		}
+	}
+
+	return result
+}
+
+// Returns a single atom, stepping past white space and comments before and
+// after it.
+func (p *Parser) Atom() string {
+	p.Comment()
+	var buf bytes.Buffer
+	for !p.AtEnd() && isAtext(p.NextChar()) {
+		buf.WriteByte(p.NextChar())
+		p.Step(1)
+	}
+	return buf.String()
 }
 
 type EncodedTextType int

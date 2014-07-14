@@ -4,12 +4,19 @@ import (
 	"bytes"
 	"strconv"
 	"strings"
+
+	"github.com/paulrosania/go-charset/charset"
+	_ "github.com/paulrosania/go-charset/data"
 )
 
 // Returns a copy of this string where each run of whitespace is compressed to
 // a single ASCII 32, and where leading and trailing whitespace is removed
 // altogether.
 func simplify(str string) string {
+	if str == "" {
+		return ""
+	}
+
 	i := 0
 	first := 0
 	for i < len(str) && first == i {
@@ -41,7 +48,7 @@ func simplify(str string) string {
 	}
 
 	if identity {
-		return str[first : last+1-first]
+		return str[first : last+1]
 	}
 
 	result := make([]rune, 0, len(str))
@@ -238,4 +245,14 @@ func deQP(s string, underscore bool) string {
 		}
 	}
 	return buf.String()
+}
+
+func decode(s string, enc string) (string, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
+	cw, err := charset.NewWriter(enc, buf)
+	if err != nil {
+		return "", err
+	}
+	_, err = cw.Write([]byte(s))
+	return buf.String(), err
 }
