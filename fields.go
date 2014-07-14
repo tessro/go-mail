@@ -3,7 +3,9 @@ package mail
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
+	"strconv"
 	"strings"
 )
 
@@ -189,6 +191,76 @@ func (f *HeaderField) parseMimeVersion(s string) {
 // Parses the Content-Location header field in \a s and records the first
 // problem found.
 func (f *HeaderField) parseContentLocation(s string) {
+	p := NewParser(unquote(trim(s), '"', '\''))
+
+	p.Whitespace()
+	e := p.Pos()
+	ok := true
+	var buf bytes.Buffer
+	for ok {
+		ok = true
+		c := p.NextChar()
+		p.Step(1)
+		if c == '%' {
+			hex := make([]byte, 2)
+			hex[0] = p.NextChar()
+			p.Step(1)
+			hex[1] = p.NextChar()
+			p.Step(1)
+			i, err := strconv.ParseInt(string(hex), 16, 8)
+			if err != nil {
+				ok = false
+			}
+			c = byte(i)
+		}
+
+		if (c >= 'a' && c <= 'z') || // alpha
+			(c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || // letter
+			c == '$' || c == '-' || // safe
+			c == '_' || c == '.' ||
+			c == '+' ||
+			c == '!' || c == '*' || // extra
+			c == '\'' || c == '(' ||
+			c == ')' || c == ',' {
+			// RFC 1738 unreserved
+			buf.WriteByte(c)
+		} else if c == ';' || c == '/' || c == '?' ||
+			c == ':' || c == '@' || c == '&' ||
+			c == '=' {
+			// RFC 1738 reserved
+			buf.WriteByte(c)
+		} else if c == '%' || c >= 127 {
+			// RFC 1738 escape
+			hex := strconv.FormatInt(int64(c), 16)
+			buf.WriteByte('%')
+			if len(hex) < 2 {
+				buf.WriteByte('0')
+			}
+			buf.WriteString(hex)
+		} else if c == ' ' {
+			// seen in real life, sent by buggy programs
+			buf.WriteString("%20")
+		} else if c == '\r' || c == '\n' {
+			// and another kind of bug, except that in this case, is there a
+			// right kind of way? let's not flame programs which do this.
+			p.Whitespace()
+		} else {
+			ok = false
+		}
+		if ok {
+			e = p.Pos()
+		}
+	}
+	p.Whitespace()
+
+	v, err := decode(buf.String(), "us-ascii")
+	f.value = v
+	if !p.AtEnd() {
+		f.Error = fmt.Errorf("Junk at position %d: %s", e, s[e:])
+	} else if err != nil {
+		f.Error = err
+	}
 }
 
 // Tries to parses any (otherwise uncovered and presumably unstructured) field
@@ -205,6 +277,13 @@ func (f *HeaderField) parseOther(s string) {
 // found. Somewhat overflexibly assumes that if there is a colon, the URL is
 // absolute, so it accepts -:/asr as a valid URL.
 func (f *HeaderField) parseContentBase(s string) {
+	f.parseContentLocation(s)
+	if !f.Valid() {
+		return
+	}
+	if !strings.Contains(f.value, ":") {
+		f.Error = errors.New("URL has no scheme")
+	}
 }
 
 // Parses Errors-To field \a s. Stores localpart@domain if it looks like a

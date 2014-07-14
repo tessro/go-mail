@@ -65,8 +65,8 @@ func isAtext(c byte) bool {
 	return false
 }
 
-// Moves pos() to the first nonwhitespace character after the current point.
-// If pos() points to nonwhitespace already, it is not moved.
+// Moves Pos() to the first nonwhitespace character after the current point.
+// If Pos() points to nonwhitespace already, it is not moved.
 func (p *Parser) Whitespace() string {
 	var out bytes.Buffer
 
@@ -80,7 +80,7 @@ func (p *Parser) Whitespace() string {
 	return out.String()
 }
 
-// Moves pos() past all comments and surrounding white space, and returns the
+// Moves Pos() past all comments and surrounding white space, and returns the
 // contents of the last comment.
 //
 // Returns a null string if there was no comment.
@@ -311,9 +311,9 @@ func (p *Parser) encodedWords(t EncodedTextType) string {
 	for !end {
 		m = p.mark()
 		p.Whitespace()
-		n := p.pos()
+		n := p.Pos()
 		s := p.encodedWord(t)
-		if n == p.pos() {
+		if n == p.Pos() {
 			end = true
 		} else {
 			out.WriteString(s)
@@ -332,7 +332,7 @@ func (p *Parser) Text() string {
 	progress := true
 	for progress {
 		m := p.mark()
-		start := p.pos()
+		start := p.Pos()
 
 		encodedWord := false
 
@@ -340,7 +340,7 @@ func (p *Parser) Text() string {
 			p.restore(m)
 			encodedWord = true
 			word = p.encodedWords(EncodedText)
-			if p.pos() == start {
+			if p.Pos() == start {
 				encodedWord = false
 			}
 		}
@@ -356,7 +356,7 @@ func (p *Parser) Text() string {
 			word = buf.String()
 		}
 
-		if p.pos() == start {
+		if p.Pos() == start {
 			progress = false
 		} else {
 			out.WriteString(space)
@@ -378,7 +378,7 @@ func (p *Parser) Text() string {
 
 // Returns the current (0-indexed) position of the cursor in the input() string
 // without changing anything.
-func (p *Parser) pos() int {
+func (p *Parser) Pos() int {
 	return p.at
 }
 

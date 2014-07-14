@@ -9,6 +9,51 @@ import (
 	_ "github.com/paulrosania/go-charset/data"
 )
 
+// Returns true is the string is quoted with \a c (default '"') as quote
+// character and \a q (default '\') as escape character. \a c and \a q may be
+// the same.
+func isQuoted(str string, c, q byte) bool {
+	if len(str) < 2 || str[0] != c || str[len(str)-1] != c {
+		return false
+	}
+	// skip past double escapes
+	i := len(str) - 2
+	for i > 1 && str[i] == q && str[i-1] == q {
+		i -= 2
+	}
+	// empty string left?
+	if i == 0 {
+		return true
+	}
+	// trailing quote escaped?
+	if str[i] == q {
+		return false
+	}
+	return true
+}
+
+// Returns the unquoted representation of the string if it isQuoted() and the
+// string itself else.
+//
+// \a c at the start and end are removed; any occurence of \a c within the
+// string is left alone; an occurence of \a q followed by \a c is converted
+// into just \a c.
+func unquote(str string, c, q byte) string {
+	if !isQuoted(str, c, q) {
+		return str
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, len(str)))
+	i := 1
+	for i < len(str)-1 {
+		if str[i] == q {
+			i++
+		}
+		buf.WriteByte(str[i])
+		i++
+	}
+	return buf.String()
+}
+
 // Returns a copy of this string where each run of whitespace is compressed to
 // a single ASCII 32, and where leading and trailing whitespace is removed
 // altogether.
