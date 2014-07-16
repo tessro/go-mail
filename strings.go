@@ -537,6 +537,41 @@ func isBoring(s string, b BoringType) bool {
 	return true
 }
 
+// Returns true if this string contains at least one instance of \a s, and the
+// characters before and after the occurence aren't letters.
+func containsWord(s, w string) bool {
+	i := strings.Index(s, w)
+	for i >= 0 {
+		before := false
+		after := false
+		if i == 0 {
+			before = true
+		} else {
+			c := s[i-1]
+			if c < 'A' || (c > 'Z' && c < 'a') || c > 'z' {
+				before = true
+			}
+		}
+		if i+len(w) == len(s) {
+			after = true
+		} else {
+			c := s[i+len(w)]
+			if c < 'A' || (c > 'Z' && c < 'a') || c > 'z' {
+				after = true
+			}
+		}
+		if before && after {
+			return true
+		}
+		offset := i + 1
+		i = strings.Index(s[offset:], w)
+		if i >= 0 {
+			i += offset
+		}
+	}
+	return false
+}
+
 // Returns a copy of this string wrapped so that each line contains at most \a
 // linelength characters. The first line is prefixed by \a firstPrefix,
 // subsequent lines by \a otherPrefix. If \a spaceAtEOL is true, all lines

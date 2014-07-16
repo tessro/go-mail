@@ -192,6 +192,37 @@ func (p *Parser) Atom() string {
 	return buf.String()
 }
 
+// Returns a single MIME token (as defined in RFC 2045 section 5), which is an
+// atom minus [/?=] plus [.].
+func (p *Parser) MimeToken() string {
+	p.Comment()
+
+	var buf bytes.Buffer
+	c := p.NextChar()
+
+	for c > 32 && c < 128 &&
+		c != '(' && c != ')' && c != '<' && c != '>' &&
+		c != '@' && c != ',' && c != ';' && c != ':' &&
+		c != '[' && c != ']' && c != '?' && c != '=' &&
+		c != '\\' && c != '"' && c != '/' {
+		buf.WriteByte(c)
+		p.Step(1)
+		c = p.NextChar()
+	}
+
+	return buf.String()
+}
+
+// Returns a single MIME value (as defined in RFC 2045 section 5), which is an
+// atom minus [/?=] plus [.] (i.e., a MIME token) or a quoted string.
+func (p *Parser) MimeValue() string {
+	p.Comment()
+	if p.NextChar() == '"' {
+		return p.String()
+	}
+	return p.MimeToken()
+}
+
 type EncodedTextType int
 
 const (

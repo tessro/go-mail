@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/paulrosania/go-charset/charset"
 )
 
 const (
@@ -45,6 +47,44 @@ const (
 	ContentBaseFieldName             = "Content-Base"
 	ErrorsToFieldName                = "Errors-To"
 )
+
+var isKnownField = map[string]bool{
+	FromFieldName:                    true,
+	ResentFromFieldName:              true,
+	SenderFieldName:                  true,
+	ResentSenderFieldName:            true,
+	ReturnPathFieldName:              true,
+	ReplyToFieldName:                 true,
+	ToFieldName:                      true,
+	CcFieldName:                      true,
+	BccFieldName:                     true,
+	ResentToFieldName:                true,
+	ResentCcFieldName:                true,
+	ResentBccFieldName:               true,
+	MessageIdFieldName:               true,
+	ResentMessageIdFieldName:         true,
+	InReplyToFieldName:               true,
+	ReferencesFieldName:              true,
+	DateFieldName:                    true,
+	OrigDateFieldName:                true,
+	ResentDateFieldName:              true,
+	SubjectFieldName:                 true,
+	CommentsFieldName:                true,
+	KeywordsFieldName:                true,
+	ContentTypeFieldName:             true,
+	ContentTransferEncodingFieldName: true,
+	ContentDispositionFieldName:      true,
+	ContentDescriptionFieldName:      true,
+	ContentIdFieldName:               true,
+	MimeVersionFieldName:             true,
+	ReceivedFieldName:                true,
+	ContentLanguageFieldName:         true,
+	ContentLocationFieldName:         true,
+	ContentMd5FieldName:              true,
+	ListIdFieldName:                  true,
+	ContentBaseFieldName:             true,
+	ErrorsToFieldName:                true,
+}
 
 type Field interface {
 	Name() string
@@ -667,16 +707,378 @@ func NewDateField() *DateField {
 func (f *DateField) Parse(value string) {
 }
 
-type ContentType struct {
+type MimeParameter struct {
+	Name, Value string
+	Parts       map[int]string
+}
+
+func NewMimeParameter(name, value string) MimeParameter {
+	return MimeParameter{
+		Name:  name,
+		Value: value,
+		Parts: make(map[int]string),
+	}
+}
+
+type MimeField struct {
 	HeaderField
+	baseValue  string
+	Parameters []MimeParameter
+}
+
+// Returns the value of the parameter named \a n (ignoring the case of the
+// name). If there is no such parameter, this function returns an empty string.
+func (f *MimeField) parameter(n string) string {
+	s := strings.ToLower(n)
+	for _, p := range f.Parameters {
+		if p.Name == s {
+			return p.Value
+		}
+	}
+	return ""
+}
+
+// Adds a parameter named \a n with value \a v, replacing any previous setting.
+func (f *MimeField) addParameter(n, v string) {
+	s := strings.ToLower(n)
+	found := false
+	for i := 0; i < len(f.Parameters); i++ {
+		if f.Parameters[i].Name == s {
+			f.Parameters[i].Value = v
+			found = true
+		}
+	}
+	if !found {
+		p := MimeParameter{Name: n, Value: v}
+		f.Parameters = append(f.Parameters, p)
+	}
+}
+
+// Parses \a p, which is expected to refer to a string whose next characters
+// form the RFC 2045 production '*(";"parameter)'.
+func (f *MimeField) parseParameters(p *Parser) {
+	done := false
+	first := true
+	for f.Valid() && !done {
+		done = true
+		i := p.Pos()
+		for p.NextChar() == ';' ||
+			p.NextChar() == ' ' || p.NextChar() == '\t' ||
+			p.NextChar() == '\r' || p.NextChar() == '\n' ||
+			p.NextChar() == '"' {
+			p.Step(1)
+		}
+		if i < p.Pos() {
+			done = false
+		}
+		if first {
+			done = false
+		}
+		if p.AtEnd() {
+			done = true
+		}
+		first = false
+		if !done {
+			n := strings.ToLower(p.MimeToken())
+			p.Comment()
+			havePart := false
+			partNumber := 0
+
+			if n == "" {
+				return
+			}
+
+			if strings.Contains(n, "*") {
+				star := strings.Index(n, "*")
+				var err error
+				partNumber, err = strconv.Atoi(n[star+1:])
+				if err == nil {
+					havePart = true
+					n = n[:star]
+				}
+			}
+			if f.Name() == ContentTypeFieldName && p.AtEnd() && charset.Info(n) != nil {
+				// sometimes we see just iso-8859-1 instead of charset=iso-8859-1.
+				exists := false
+				for _, param := range f.Parameters {
+					if param.Name == "charset" {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					param := NewMimeParameter("charset", n)
+					f.Parameters = append(f.Parameters, param)
+					return
+				}
+			}
+			if p.NextChar() == ':' && isKnownField[n] {
+				// some spammers send e.g. 'c-t: stuff subject:
+				// stuff'.  we ignore the second field entirely. who
+				// cares about spammers.
+				n = ""
+				p.Step(len(p.str))
+			} else if p.NextChar() != '=' {
+				return
+			}
+
+			p.Step(1)
+			p.Whitespace()
+			v := ""
+			if p.NextChar() == '"' {
+				v = p.MimeValue()
+			} else {
+				start := p.Pos()
+				v = p.MimeValue()
+				ok := true
+				for ok && !p.AtEnd() &&
+					p.NextChar() != ';' &&
+					p.NextChar() != '"' {
+					if p.DotAtom() == "" && p.MimeValue() == "" {
+						ok = false
+					}
+				}
+				if ok {
+					v = p.str[start:p.Pos()]
+				}
+			}
+			p.Comment()
+
+			if n != "" {
+				i := 0
+				for i < len(f.Parameters) {
+					if f.Parameters[i].Name == n {
+						break
+					}
+					i++
+				}
+				if i >= len(f.Parameters) {
+					param := NewMimeParameter(n, "")
+					f.Parameters = append(f.Parameters, param)
+				}
+				if havePart {
+					f.Parameters[i].Parts[partNumber] = v
+				} else {
+					f.Parameters[i].Value = v
+				}
+			}
+		}
+	}
+
+	for _, p := range f.Parameters {
+		if p.Value == "" && p.Parts[0] != "" { // TODO: should probably test presence rather than emptiness
+			// I get to be naughty too sometimes
+			n := 0
+			v, ok := p.Parts[n]
+			for ok {
+				p.Value += v
+				n++
+				v = p.Parts[n]
+			}
+		}
+	}
+}
+
+// This reimplementation of rfc822() never generates UTF-8 at the moment.
+// Merely a SMoP, but I haven't the guts to do it at the moment.
+func (f *MimeField) rfc822(avoidUtf8 bool) string {
+	s := f.baseValue
+	lineLength := len(f.Name()) + 2 + len(s)
+
+	words := []string{}
+	for _, p := range f.Parameters {
+		s := p.Value
+		if !isBoring(s, MIMEBoring) {
+			s = quote(s, '"', '\'')
+		}
+		words = append(words, p.Name+"="+s)
+	}
+
+	for len(words) > 0 {
+		i := 0
+		for i < len(words) && lineLength+2+len(words[i]) > 78 {
+			i++
+		}
+		if i < len(words) {
+			s += "; "
+			lineLength += 2
+		} else {
+			i = 0
+			s += ";\r\n "
+			lineLength = 1
+		}
+		s += words[i] // FIXME: need more elaboration for 2231
+		lineLength += len(words[i])
+		words = append(words[:i], words[i+1:]...)
+	}
+
+	return s
+}
+
+// Like HeaderField::value(), returns the contents of this MIME field in a
+// representation suitable for storage.
+func (f *MimeField) Value() string {
+	return f.rfc822(false)
+	// the best that can be said about this is that it corresponds to
+	// HeaderField::assemble.
+}
+
+type ContentType struct {
+	MimeField
+	Type, Subtype string
 }
 
 func NewContentType() *ContentType {
 	hf := HeaderField{name: ContentTypeFieldName}
-	return &ContentType{hf}
+	mf := MimeField{HeaderField: hf}
+	return &ContentType{MimeField: mf}
 }
 
-func (f *ContentType) Parse(value string) {
+func (f *ContentType) Parse(s string) {
+	p := NewParser(s)
+	p.Whitespace()
+	for p.Present(":") {
+		p.Whitespace()
+	}
+
+	mustGuess := false
+
+	if p.AtEnd() {
+		f.Type = "text"
+		f.Subtype = "plain"
+	} else {
+		x := p.mark()
+		if p.NextChar() == '/' {
+			mustGuess = true
+		} else {
+			f.Type = strings.ToLower(p.MimeToken())
+		}
+		if p.AtEnd() {
+			if s == "text" {
+				f.Type = "text" // elm? mailtool? someone does this, anyway.
+				f.Subtype = "plain"
+				// the remainder is from RFC 1049
+			} else if s == "postscript" {
+				f.Type = "application"
+				f.Subtype = "postscript"
+			} else if s == "sgml" {
+				f.Type = "text"
+				f.Subtype = "sgml"
+			} else if s == "tex" {
+				f.Type = "application"
+				f.Subtype = "x-tex"
+			} else if s == "troff" {
+				f.Type = "application"
+				f.Subtype = "x-troff"
+			} else if s == "dvi" {
+				f.Type = "application"
+				f.Subtype = "x-dvi"
+			} else if strings.HasPrefix(s, "x-") {
+				f.Type = "application"
+				f.Subtype = "x-rfc1049-" + s
+			} else {
+				// scribe and undefined types
+				f.Error = fmt.Errorf("Invalid Content-Type: %q", s)
+			}
+		} else {
+			if p.NextChar() == '/' {
+				p.Step(1)
+				if !p.AtEnd() || p.NextChar() != ';' {
+					f.Subtype = strings.ToLower(p.MimeToken())
+				}
+				if f.Subtype == "" {
+					mustGuess = true
+				}
+			} else if p.NextChar() == '=' {
+				// oh no. someone skipped the content-type and
+				// supplied only some parameters. we'll assume it's
+				// text/plain and parse the parameters.
+				f.Type = "text"
+				f.Subtype = "plain"
+				p.restore(x)
+				mustGuess = true
+			} else {
+				f.addParameter("original-type", f.Type+"/"+f.Subtype)
+				f.Type = "application"
+				f.Subtype = "octet-stream"
+				mustGuess = true
+			}
+			f.parseParameters(p)
+		}
+	}
+
+	if mustGuess {
+		fn := f.parameter("name")
+		if fn == "" {
+			fn = f.parameter("filename")
+		}
+		for strings.HasSuffix(fn, ".") {
+			fn = fn[:len(fn)-1]
+		}
+		fn = strings.ToLower(fn)
+		if strings.HasSuffix(fn, "jpg") || strings.HasSuffix(fn, "jpeg") {
+			f.Type = "image"
+			f.Subtype = "jpeg"
+		} else if strings.HasSuffix(fn, "htm") || strings.HasSuffix(fn, "html") {
+			f.Type = "text"
+			f.Subtype = "html"
+		} else if fn == "" && f.Subtype == "" && f.Type == "text" {
+			f.Subtype = "plain"
+		} else if f.Type == "text" {
+			f.addParameter("original-type", f.Type+"/"+f.Subtype)
+			f.Subtype = "plain"
+		} else {
+			f.addParameter("original-type", f.Type+"/"+f.Subtype)
+			f.Type = "application"
+			f.Subtype = "octet-stream"
+		}
+	}
+
+	if f.Type == "" || f.Subtype == "" {
+		f.Error = fmt.Errorf("Both type and subtype must be nonempty: %q" + s)
+	}
+
+	if f.Valid() && f.Type == "multipart" && f.Subtype == "appledouble" &&
+		f.parameter("boundary") == "" {
+		// some people send appledouble without the header. what can
+		// we do? let's just call it application/octet-stream. whoever
+		// wants to decode can try, or reply.
+		f.Type = "application"
+		f.Subtype = "octet-stream"
+	}
+
+	if f.Valid() && !p.AtEnd() &&
+		f.Type == "multipart" && f.parameter("boundary") == "" &&
+		containsWord(strings.ToLower(s), "boundary") {
+		csp := NewParser(s[strings.Index(strings.ToLower(s), "boundary"):])
+		csp.require("boundary")
+		csp.Whitespace()
+		if csp.Present("=") {
+			csp.Whitespace()
+		}
+		m := csp.mark()
+		b := csp.String()
+		if b == "" || csp.err != nil {
+			csp.restore(m)
+			b = simplify(section(csp.str[csp.Pos():], ";", 1))
+			if !isQuoted(b, '"', '\'') {
+				b = strings.Replace(b, "\\", "", -1)
+			}
+			if isQuoted(b, '"', '\'') {
+				b = unquote(b, '"', '\'')
+			} else if isQuoted(b, '\'', '\'') {
+				b = unquote(b, '\'', '\'')
+			}
+		}
+		if b != "" {
+			f.addParameter("boundary", b)
+		}
+	}
+
+	if f.Valid() && f.Type == "multipart" && f.parameter("boundary") == "" {
+		f.Error = errors.New("Multipart entities must have a boundary parameter.")
+	}
+	f.baseValue = f.Type + "/" + f.Subtype
 }
 
 type ContentTransferEncoding struct {
