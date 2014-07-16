@@ -1157,15 +1157,35 @@ func (f *ContentDisposition) Parse(s string) {
 }
 
 type ContentLanguage struct {
-	HeaderField
+	MimeField
+	Languages []string
 }
 
 func NewContentLanguage() *ContentLanguage {
 	hf := HeaderField{name: ContentLanguageFieldName}
-	return &ContentLanguage{hf}
+	mf := MimeField{HeaderField: hf}
+	return &ContentLanguage{MimeField: mf}
 }
 
-func (f *ContentLanguage) Parse(value string) {
+func (f *ContentLanguage) Parse(s string) {
+	p := NewParser(s)
+	for {
+		p.Comment()
+		t := p.MimeToken()
+		if t != "" {
+			f.Languages = append(f.Languages, t)
+		}
+		p.Comment()
+		if !p.Present(",") {
+			break
+		}
+	}
+
+	if !p.AtEnd() || len(f.Languages) == 0 {
+		f.Error = fmt.Errorf("Unparseable value: %q", s)
+	}
+
+	f.baseValue = strings.Join(f.Languages, ", ")
 }
 
 func NewHeaderFieldNamed(name string) Field {
