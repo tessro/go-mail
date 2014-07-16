@@ -236,6 +236,8 @@ type EncodingType int
 const (
 	QPEncoding EncodingType = iota
 	Base64Encoding
+	UuencodeEncoding
+	BinaryEncoding
 )
 
 // Steps past a MIME encoded-word (as defined in RFC 2047) and returns its

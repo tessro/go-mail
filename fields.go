@@ -1082,15 +1082,41 @@ func (f *ContentType) Parse(s string) {
 }
 
 type ContentTransferEncoding struct {
-	HeaderField
+	MimeField
+	Encoding EncodingType
 }
 
 func NewContentTransferEncoding() *ContentTransferEncoding {
 	hf := HeaderField{name: ContentTransferEncodingFieldName}
-	return &ContentTransferEncoding{hf}
+	mf := MimeField{HeaderField: hf}
+	return &ContentTransferEncoding{MimeField: mf}
 }
 
-func (f *ContentTransferEncoding) Parse(value string) {
+func (f *ContentTransferEncoding) Parse(s string) {
+	p := NewParser(s)
+
+	t := strings.ToLower(p.MimeValue())
+	p.Comment()
+	// FIXME: shouldn't we do p.end() here and record parse errors?
+
+	if t == "7bit" || t == "8bit" || t == "8bits" || t == "binary" || t == "unknown" {
+		f.Encoding = BinaryEncoding
+		f.baseValue = "7bit"
+	} else if t == "quoted-printable" {
+		f.Encoding = QPEncoding
+		f.baseValue = "quoted-printable"
+	} else if t == "base64" {
+		f.Encoding = Base64Encoding
+		f.baseValue = "base64"
+	} else if t == "x-uuencode" || t == "uuencode" {
+		f.Encoding = UuencodeEncoding
+		f.baseValue = "x-uuencode"
+	} else if strings.Contains(t, "bit") && t[0] >= '0' && t[0] <= '9' {
+		f.Encoding = BinaryEncoding
+		f.baseValue = "7bit"
+	} else {
+		f.Error = fmt.Errorf("Invalid c-t-e value: %q", t)
+	}
 }
 
 type ContentDisposition struct {
