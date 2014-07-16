@@ -9,6 +9,14 @@ import (
 	_ "github.com/paulrosania/go-charset/data"
 )
 
+type BoringType int
+
+const (
+	TotallyBoring BoringType = iota
+	IMAPBoring
+	MIMEBoring
+)
+
 // Returns true is the string is quoted with \a c (default '"') as quote
 // character and \a q (default '\') as escape character. \a c and \a q may be
 // the same.
@@ -51,6 +59,23 @@ func unquote(str string, c, q byte) string {
 		buf.WriteByte(str[i])
 		i++
 	}
+	return buf.String()
+}
+
+// Returns a version of this string quited with \a c, and where any occurences
+// of \a c or \a q are escaped with \a q.
+func quote(str string, c, q byte) string {
+	buf := bytes.NewBuffer(make([]byte, 0, len(str)+2))
+	buf.WriteByte(c)
+	i := 0
+	for i < len(str) {
+		if str[i] == c || str[i] == q {
+			buf.WriteByte(q)
+		}
+		buf.WriteByte(str[i])
+		i++
+	}
+	buf.WriteByte(c)
 	return buf.String()
 }
 
@@ -300,4 +325,270 @@ func decode(s string, enc string) (string, error) {
 	}
 	_, err = cw.Write([]byte(s))
 	return buf.String(), err
+}
+
+// Do RFC 2047 decoding of \a s, totally ignoring what the encoded-text in \a s
+// contains.
+//
+// Depending on circumstances, the encoded-text may contain different sets of
+// characters. Moreover, not every 2047 encoder obeys the rules. This function
+// checks nothing, it just decodes.
+func de2047(s string) string {
+	out := ""
+	if !strings.HasPrefix(s, "=?") || !strings.HasSuffix(s, "?=") {
+		return out
+	}
+	cs := 2
+	ce := strings.IndexByte(s[2:], '*')
+	if ce >= 0 {
+		ce += 2
+	}
+	es := strings.IndexByte(s[2:], '?') + 1
+	if es >= 1 { // 0 == not found
+		es += 2
+	}
+	if es < cs {
+		return out
+	}
+	if ce < cs {
+		ce = es
+	}
+	if ce >= es {
+		ce = es - 1
+	}
+	if s[es+1] != '?' {
+		return out
+	}
+
+	encoded := s[es+2 : len(s)-2]
+	decoded := ""
+
+	switch s[es] {
+	case 'Q', 'q':
+		decoded = deQP(encoded, true)
+	case 'B', 'b':
+		decoded = de64(encoded)
+	default:
+		return out
+	}
+
+	enc := s[cs:ce]
+	buf := bytes.NewBuffer(make([]byte, 0, len(encoded)))
+	cw, err := charset.NewWriter(enc, buf)
+	if err != nil {
+		// if we didn't recognise the codec, we'll assume that it's
+		// ASCII if that would work and otherwise refuse to decode.
+		_, err = decode(decoded, "us-ascii")
+		if err != nil {
+			return out
+		}
+		cw, err = charset.NewWriter("us-ascii", buf)
+		if err != nil {
+			panic(err)
+		}
+	}
+	cw.Write([]byte(s)) // FIXME: Ignores errors
+	return buf.String()
+}
+
+// This static function returns the RFC 2047-encoded version of \a s.
+func encodePhrase(s string) string {
+	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
+	words := strings.Split(simplify(s), " ")
+
+	for i := 0; i < len(words); i++ {
+		w := words[i]
+
+		if i > 0 {
+			buf.WriteByte(' ')
+		}
+
+		if isAscii(w) && isBoring(ascii(w), TotallyBoring) {
+			buf.WriteString(ascii(w))
+		} else {
+			for i < len(words) && !(isAscii(words[i]) && isBoring(ascii(words[i]), TotallyBoring)) {
+				w += " " + words[i]
+				i++
+			}
+			buf.WriteString(encodeWord(words[i]))
+		}
+	}
+
+	return buf.String()
+}
+
+// This static function returns an RFC 2047 encoded-word representing \a w.
+func encodeWord(w string) string {
+	if w == "" {
+		return ""
+	}
+
+	return w
+	/*
+		// FIXME: encode properly
+		//Codec * c = Codec::byString( w );
+		//EString cw( c->fromUnicode( w ) );
+		cw := w
+
+		buf := bytes.NewBuffer(make([]byte, 0, len(w)))
+		buf.WriteString("=?")
+		buf.WriteString(c.name())
+		buf.WriteString("?")
+		t := buf.String()
+		qp := eQP(cw, true)
+		b64 := e64(cw)
+		if len(qp) <= len(b64)+3 &&
+			len(t)+len(qp) <= 73 {
+			buf.WriteString("q?")
+			buf.WriteString(qp)
+			buf.WriteString("?=")
+			t += buf.String() // FIXME: verify append is correct here, first half of buffer should already be in `t`
+		} else {
+			prefix := t + "b?"
+			t = ""
+			for b64 != "" {
+				allowed := 73 - len(prefix)
+				allowed = 4 * (allowed / 4)
+				word := prefix
+				word += b64[:allowed]
+				word += "?="
+				b64 = b64[allowed:]
+				t += word
+				if b64 != "" {
+					t += " "
+				}
+			}
+		}
+
+		return t
+	*/
+}
+
+// Returns true if this string contains only tab, cr, lf and printable ASCII
+// characters, and false if it contains one or more other characters.
+func isAscii(s string) bool {
+	if s == "" {
+		return true
+	}
+	i := 0
+	for i < len(s) {
+		if s[i] >= 128 || (s[i] < 32 && s[i] != 9 && s[i] != 10 && s[i] != 13) {
+			return false
+		}
+		i++
+	}
+	return true
+}
+
+// Returns a copy of this string in 7-bit ASCII. Any characters that aren't
+// printable ascii are changed into '?'. (Is '?' the right choice?)
+//
+// This looks like AsciiCodec::fromUnicode(), but is semantically different.
+// This function is for logging and debugging and may leave out a different set
+// of characters than does AsciiCodec::fromUnicode().
+func ascii(s string) string {
+	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
+	i := 0
+	for i < len(s) {
+		if s[i] >= ' ' && s[i] < 127 {
+			buf.WriteByte(s[i])
+		} else {
+			buf.WriteByte('?')
+		}
+		i++
+	}
+	return buf.String()
+}
+
+// Returns true if this string is really boring, and false if it's empty or
+// contains at least one character that may warrant quoting in some context. So
+// far RFC 822 atoms, 2822 atoms, IMAP atoms and MIME tokens are considered.
+//
+// This function considers the intersection of those character classes to be
+// the Totally boring subset. If \a b is not its default value, it may include
+// other characters.
+func isBoring(s string, b BoringType) bool {
+	if s == "" {
+		return false // empty strings aren't boring - they may need quoting
+	}
+	i := 0
+	exciting := false
+	for i < len(s) && !exciting {
+		switch s[i] {
+		case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+			'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+			'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '!', '#', '$', '&', '+', '-':
+			// boring
+		case '.':
+			if b != MIMEBoring {
+				exciting = true
+			}
+		default:
+			exciting = true
+		}
+		i++
+	}
+	// if we saw an exciting character...
+	if exciting {
+		return false
+	}
+	return true
+}
+
+// Returns a copy of this string wrapped so that each line contains at most \a
+// linelength characters. The first line is prefixed by \a firstPrefix,
+// subsequent lines by \a otherPrefix. If \a spaceAtEOL is true, all lines
+// except the last end with a space.
+//
+// The prefixes are counted towards line length, but the optional trailing
+// space is not.
+//
+// Only space (ASCII 32) is a line-break opportunity. If there are multiple
+// spaces where a line is broken, all the spaces are replaced by a single CRLF.
+// Linefeeds added use CRLF.
+func wrap(s string, linelength int, firstPrefix, otherPrefix string, spaceAtEOL bool) string {
+	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
+	buf.WriteString(firstPrefix)
+
+	// move is where we keep the text that has to be moved to the next
+	// line. it too should be modifiable() all the time.
+	var move bytes.Buffer
+	i := 0
+	linestart := 0
+	space := 0
+	for i < len(s) {
+		c := s[i]
+		if c == ' ' {
+			space = buf.Len()
+		} else if c == '\n' {
+			linestart = buf.Len() + 1
+		}
+		buf.WriteByte(c)
+		i++
+		// add a soft linebreak?
+		if buf.Len() > linestart+linelength && space > linestart {
+			for space > 0 && buf.String()[space-1] == ' ' {
+				space--
+			}
+			linestart = space + 1
+			for linestart < buf.Len() && buf.String()[linestart] == ' ' {
+				linestart++
+			}
+			move.Truncate(0)
+			if buf.Len() > linestart {
+				move.WriteString(buf.String()[linestart:])
+			}
+			if spaceAtEOL {
+				buf.Truncate(space + 1)
+			} else {
+				buf.Truncate(space)
+			}
+			buf.WriteString("\r\n")
+			buf.WriteString(otherPrefix)
+			buf.WriteString(move.String())
+		}
+	}
+	return buf.String()
 }

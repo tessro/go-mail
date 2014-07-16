@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -99,7 +98,6 @@ func (f *HeaderField) Parse(s string) {
 	default:
 		f.parseOther(s)
 	}
-	log.Printf("Parse: value = %q", f.value)
 }
 
 // Parses the *text production from \a s, as modified to include encoded-words
@@ -290,6 +288,20 @@ func (f *HeaderField) parseContentBase(s string) {
 // single address (and reasonably error-free) and an empty value if there's any
 // doubt what to store.
 func (f *HeaderField) parseErrorsTo(s string) {
+	ap := NewAddressParser(s)
+
+	if ap.firstError != nil || len(ap.addresses) != 1 {
+		return
+	}
+
+	a := ap.addresses[0]
+	if a.t != NormalAddressType {
+		return
+	}
+
+	v, err := decode(a.lpdomain(), "us-ascii")
+	f.value = v
+	f.Error = err
 }
 
 // Returns true if this header field is valid (or unparsed, as is the case for
@@ -304,14 +316,343 @@ func (f *HeaderField) SetUnparsedValue(value string) {
 
 type AddressField struct {
 	HeaderField
+	Addresses []Address
 }
 
 func NewAddressField(name string) *AddressField {
 	hf := HeaderField{name: name}
-	return &AddressField{hf}
+	return &AddressField{HeaderField: hf}
 }
 
-func (f *AddressField) Parse(value string) {
+// Generates the RFC 822 representation of the field, based on the addresses().
+// If \a avoidUTf8 is true, rfc822() will be lossy rather than include any
+// UTF-8.
+func (f *AddressField) rfc822(avoidUtf8 bool) string {
+	s := ""
+
+	name := f.Name()
+	if name == ReturnPathFieldName {
+		if len(f.Addresses) == 0 {
+		} else if f.Addresses[0].t == BounceAddressType {
+			s = "<>"
+		} else if f.Addresses[0].t == NormalAddressType {
+			s = "<" + f.Addresses[0].lpdomain() + ">"
+		}
+	} else if name == MessageIdFieldName ||
+		name == ResentMessageIdFieldName ||
+		name == ContentIdFieldName ||
+		name == ReferencesFieldName && len(f.Addresses) == 0 {
+		if len(f.Addresses) > 0 {
+			s = "<" + f.Addresses[0].toString(false) + ">"
+		} else {
+			s = f.Name() + ": " + ascii(f.Value())
+			s = wrap(simplify(s), 78, "", " ", false)
+			p := len(f.Name()) + 1
+			for p < len(s) &&
+				(s[p] == ' ' || s[p] == '\r' || s[p] == '\n') {
+				p++
+			}
+			s = s[p:]
+		}
+	} else if name == FromFieldName ||
+		name == ResentFromFieldName ||
+		name == SenderFieldName ||
+		name == ResentSenderFieldName ||
+		name == ReturnPathFieldName ||
+		name == ReplyToFieldName ||
+		name == ToFieldName || name == CcFieldName || name == BccFieldName ||
+		name == ResentToFieldName || name == ResentCcFieldName || name == ResentBccFieldName ||
+		name == ReferencesFieldName {
+		first := true
+		wsep := ""
+		lsep := ""
+		c := len(f.Name()) + 2
+		lpos := 0
+
+		if f.Name() == ReferencesFieldName {
+			wsep = " "
+			lsep = "\r\n "
+			lpos = 1
+		} else {
+			wsep = ", "
+			lsep = ",\r\n    "
+			lpos = 4
+		}
+
+		for i, addr := range f.Addresses {
+			a := addr.toString(avoidUtf8)
+
+			if f.Name() == ReferencesFieldName {
+				a = "<" + a + ">"
+			}
+
+			if first {
+				first = false
+			} else if (c+len(wsep)+len(a) > 78) ||
+				(c+len(wsep)+len(a) == 78 && len(f.Addresses) > i+1) {
+				s += lsep
+				c = lpos
+			} else {
+				s += wsep
+				c += len(wsep)
+			}
+			s += a
+			c += len(a)
+		}
+	}
+
+	return s
+}
+
+func (f *AddressField) Value() string {
+	if len(f.Addresses) == 0 {
+		return f.HeaderField.Value()
+	}
+	// and for message-id, content-id and references:
+	v, _ := decode(simplify(f.rfc822(true)), "us-ascii")
+	return v
+}
+
+func (f *AddressField) Parse(s string) {
+	switch f.Name() {
+	case SenderFieldName:
+		f.parseMailbox(s)
+		if !f.Valid() && len(f.Addresses) == 0 {
+			// sender is quite often wrong in otherwise perfectly
+			// legible messages. so we'll nix out the error. Header
+			// will probably remove the field completely, since an
+			// empty Sender field isn't sensible.
+			f.Error = nil
+		}
+	case ReturnPathFieldName:
+		f.parseMailbox(s)
+		if !f.Valid() || len(f.Addresses) != 1 ||
+			(f.Addresses[0].t != BounceAddressType && f.Addresses[0].t != NormalAddressType) {
+			// return-path sometimes contains strange addresses when
+			// migrating from older stores. if it does, just kill
+			// it. this never happens when receiving mail, since we'll
+			// make a return-path of our own.
+			f.Error = nil
+			f.Addresses = nil
+		}
+	case ResentSenderFieldName:
+		f.parseMailbox(s)
+	case FromFieldName, ResentFromFieldName:
+		f.parseMailboxList(s)
+	case ToFieldName, CcFieldName, BccFieldName, ReplyToFieldName,
+		ResentToFieldName, ResentCcFieldName, ResentBccFieldName:
+		f.parseAddressList(s)
+		if f.Name() == CcFieldName && !f.Valid() && len(f.Addresses) <= 1 {
+			// /bin/mail tempts people to type escape, ctrl-d or
+			// similar into the cc field, so we try to recover from
+			// that.
+			i := 0
+			for i < len(s) && s[i] >= ' ' && s[i] != 127 {
+				i++
+			}
+			if i < len(s) {
+				f.Error = nil
+				f.Addresses = nil
+			}
+		}
+		if !f.Valid() && len(simplify(s)) == 1 {
+			f.Error = nil
+			f.Addresses = nil
+		}
+		if f.Valid() && strings.Contains(s, "<>") {
+			// some spammers attempt to send 'To: asdfsaf <>'.
+			bounces := 0
+			otherProblems := 0
+			for _, a := range f.Addresses {
+				if a.t == BounceAddressType {
+					bounces++
+				} else if a.err != nil {
+					otherProblems++
+				}
+			}
+			if bounces > 0 && otherProblems == 0 {
+				// there's one or more <>, but nothing else bad.
+				clean := make([]Address, 0, len(f.Addresses)-bounces)
+				for _, a := range f.Addresses {
+					if a.t != BounceAddressType {
+						clean = append(clean, a)
+					}
+				}
+				f.Addresses = clean
+			}
+			if !f.Valid() && len(f.Addresses) == 0 && !strings.Contains(s, "@") {
+				// some spammers send total garbage. we can't detect all
+				// instances of garbage, but if it doesn't contain even
+				// one "@" and also not even one parsable address, surely
+				// it's garbage.
+				f.Error = nil
+			}
+			if !f.Valid() && len(f.Addresses) <= 1 &&
+				(strings.HasPrefix(s, "@") || strings.Contains(s, "<@")) {
+				f.Addresses = nil
+				f.Error = nil
+			}
+		}
+	case ContentIdFieldName:
+		f.parseContentId(s)
+	case MessageIdFieldName, ResentMessageIdFieldName:
+		f.parseMessageId(s)
+	case ReferencesFieldName:
+		f.parseReferences(s)
+	default:
+		// Should not happen.
+	}
+
+	if f.Name() != ReturnPathFieldName {
+		f.outlawBounce()
+	}
+}
+
+// Parses the RFC 2822 address-list production from \a s and records the first
+// problem found.
+func (f *AddressField) parseAddressList(s string) {
+	ap := NewAddressParser(s)
+	f.Error = ap.firstError
+	f.Addresses = ap.addresses
+}
+
+// Parses the RFC 2822 mailbox-list production from \a s and records the first
+// problem found.
+func (f *AddressField) parseMailboxList(s string) {
+	f.parseAddressList(s)
+
+	// A mailbox-list is an address-list where groups aren't allowed.
+	for _, a := range f.Addresses {
+		if !f.Valid() {
+			break
+		}
+		if a.t == EmptyGroupAddressType {
+			f.Error = fmt.Errorf("Invalid mailbox: %q", a.toString(false))
+		}
+	}
+}
+
+// Parses the RFC 2822 mailbox production from \a s and records the first
+// problem found.
+func (f *AddressField) parseMailbox(s string) {
+	f.parseAddressList(s)
+
+	// A mailbox in our world is just a mailbox-list with one entry.
+	if f.Valid() && len(f.Addresses) > 1 {
+		f.Error = errors.New("Only one address is allowed")
+	}
+}
+
+// Parses the contents of an RFC 2822 references field in \a s. This is
+// nominally 1*msg-id, but in practice we need to be a little more flexible.
+// Overlooks common problems and records the first serious problems found.
+func (f *AddressField) parseReferences(s string) {
+	ap := references(s)
+	f.Addresses = ap.addresses
+	f.Error = ap.firstError
+}
+
+// Parses the RFC 2822 msg-id production from \a s and/or records the first
+// serious error found.
+func (f *AddressField) parseMessageId(s string) {
+	ap := references(s)
+
+	if ap.firstError != nil {
+		f.Error = ap.firstError
+	} else if len(ap.addresses) == 1 {
+		f.Addresses = ap.addresses
+	} else {
+		f.Error = errors.New("Need exactly one")
+	}
+}
+
+// Like parseMessageId( \a s ), except that it also accepts <blah>.
+func (f *AddressField) parseContentId(s string) {
+	ap := NewAddressParser(s)
+	f.Error = ap.firstError
+	if len(ap.addresses) != 1 {
+		f.Error = errors.New("Need exactly one")
+		return
+	}
+
+	switch ap.addresses[0].t {
+	case NormalAddressType:
+		f.Addresses = ap.addresses
+	case BounceAddressType:
+		f.Error = errors.New("<> is not legal, it has to be <some@thing>")
+	case EmptyGroupAddressType:
+		f.Error = errors.New("Error parsing Content-Id")
+	case LocalAddressType:
+		f.Addresses = ap.addresses
+	case InvalidAddressType:
+		f.Error = errors.New("Error parsing Content-Id")
+	}
+}
+
+// Checks whether '<>' is present in this address field, and records an error
+// if it is. '<>' is legal in Return-Path, but as of April 2005, not in any
+// other field.
+func (f *AddressField) outlawBounce() {
+	for _, a := range f.Addresses {
+		if a.t == BounceAddressType {
+			f.Error = errors.New("No-bounce address not allowed in this field")
+		}
+	}
+}
+
+// This static function parses the references field \a r. This is in
+// AddressParser because References and Message-ID both use the address
+// productions in RFC 822/1034.
+//
+// This function does it best to skip ahead to the next message-id if there is
+// a syntax error in one. It silently ignores the errors. This is because it's
+// so common to have a bad message-id in the references field of an otherwise
+// impeccable message.
+func references(r string) AddressParser {
+	ap := NewAddressParser("")
+	ap.s = r
+	i := len(r) - 1
+	i = ap.comment(i)
+	for i > 0 {
+		l := i
+		ok := true
+		dom := ""
+		lp := ""
+		if r[i] != '>' {
+			ok = false
+		} else {
+			i--
+			dom, i = ap.domain(i)
+			if i >= 0 && r[i] == '@' {
+				i--
+			} else {
+				ok = false
+			}
+			lp, i = ap.localpart(i)
+			if i >= 0 && r[i] == '<' {
+				i--
+			} else {
+				ok = false
+			}
+			i = ap.comment(i)
+			if i >= 0 && ap.s[i] == ',' {
+				i--
+				i = ap.comment(i)
+			}
+		}
+		if ok && dom != "" && lp != "" {
+			ap.add("", lp, dom)
+		} else {
+			i = l
+			i--
+			for i >= 0 && r[i] != ' ' {
+				i--
+			}
+			i = ap.comment(i)
+		}
+	}
+	ap.firstError = nil
+	return ap
 }
 
 type DateField struct {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"github.com/paulrosania/go-charset/charset"
@@ -113,6 +112,42 @@ func (p *Parser) Comment() string {
 		}
 		p.Whitespace()
 		p.lc = buf.String()
+	}
+	return buf.String()
+}
+
+// Steps past an atom or a quoted-text, and returns that text.
+func (p *Parser) String() string {
+	p.Comment()
+
+	// now, treat it either as a quoted string or an unquoted atom
+	if p.NextChar() != '"' {
+		return p.Atom()
+	}
+
+	var buf bytes.Buffer
+	p.Step(1)
+	done := false
+	for !done && !p.AtEnd() {
+		c := p.NextChar()
+		p.Step(1)
+		if c == '"' {
+			done = true
+		} else if c == '\\' {
+			buf.WriteByte(p.NextChar())
+			p.Step(1)
+		} else if c == 9 || c == '\r' || c == '\n' || c == ' ' {
+			wsp := p.Pos() - 1
+			p.Whitespace()
+			t := p.str[wsp:p.Pos()]
+			if strings.ContainsAny(t, "\r\n") {
+				buf.WriteByte(' ')
+			} else {
+				buf.WriteString(t)
+			}
+		} else {
+			buf.WriteByte(c)
+		}
 	}
 	return buf.String()
 }
@@ -376,6 +411,83 @@ func (p *Parser) Text() string {
 	return out.String()
 }
 
+// Steps past an RFC 822 phrase (a series of word/encoded-words) at the cursor
+// and returns its unicode representation, which may be an empty string.
+func (p *Parser) Phrase() string {
+	var buf bytes.Buffer
+	p.Comment()
+
+	wasEncoded := false
+	spaces := ""
+	progress := true
+
+	for !p.AtEnd() && progress {
+		t := ""
+
+		encoded := false
+		h := false
+		start := p.Pos()
+		m := p.mark()
+		if p.Present("=?") {
+			p.restore(m)
+			t = p.encodedWords(EncodedPhrase)
+			if start < p.Pos() {
+				h = true
+				encoded = true
+			}
+		}
+		if !h && p.Present("\"") {
+			p.restore(m)
+			t, _ = decode(p.String(), "us-ascii")
+			if start < p.Pos() {
+				h = true
+			}
+		}
+		if !h {
+			t, _ = decode(p.Atom(), "us-ascii")
+			if start < p.Pos() {
+				h = true
+			}
+		}
+
+		if h || t != "" {
+			// we did read something, so we need to add it to the
+			// previous word(s).
+
+			// first, append the spaces before the word we added. RFC
+			// 2047 says that spaces between encoded-words should be
+			// disregarded, so we do.
+			if !encoded || !wasEncoded {
+				buf.WriteString(spaces)
+			}
+			// next append the word we read
+			buf.WriteString(t)
+			// then read new spaces which we'll use if there is
+			// another word.
+			spaces = p.Whitespace()
+			start := p.Pos()
+			p.Comment()
+			// if there weren't any spaces, but there is a comment,
+			// then we need to treat the comment as a single space.
+			if spaces == "" && start < p.Pos() {
+				spaces += " "
+			}
+			// RFC violation: if the spaces included a CR/LF, we
+			// properly should just get rid of the CRLF and one
+			// trailing SP, but changing it all to a single space
+			// matches the expectations of most senders better.
+			if strings.ContainsAny(spaces, "\r\n") {
+				spaces = " "
+			}
+			wasEncoded = encoded
+		} else {
+			progress = false
+		}
+	}
+
+	return buf.String()
+}
+
 // Returns the current (0-indexed) position of the cursor in the input() string
 // without changing anything.
 func (p *Parser) Pos() int {
@@ -411,7 +523,6 @@ func (p *Parser) Present(s string) bool {
 
 	l := strings.ToLower(p.str[p.at : p.at+len(s)])
 	s = strings.ToLower(s)
-	log.Printf("wanted %q got %q (%q)", s, l, p.following())
 	if l != s {
 		return false
 	}

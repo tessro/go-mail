@@ -1,7 +1,6 @@
 package mail
 
 import (
-	"log"
 	"strings"
 )
 
@@ -51,7 +50,6 @@ func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
 			}
 		} else if j > i && rfc5322[j] == ':' {
 			name := rfc5322[i:j]
-			log.Printf("name = %q", name)
 			i = j
 			i++
 			for rfc5322[i] == ' ' || rfc5322[i] == '\t' {
@@ -68,7 +66,6 @@ func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
 				j--
 			}
 			value := rfc5322[i:j]
-			log.Printf("value = %q", value)
 			//233-237
 			if simplify(value) != "" || strings.HasPrefix(strings.ToLower(name), "x-") {
 				f := NewHeaderField(name, value)
@@ -89,4 +86,32 @@ func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
 
 func (h *Header) Add(f Field) {
 	h.fields = append(h.fields, f)
+}
+
+func (h *Header) addressField(fn string, n int) Field {
+	switch fn {
+	case FromFieldName, ResentFromFieldName, SenderFieldName, ResentSenderFieldName:
+		f, ok := h.field(fn, n).(*AddressField)
+		if ok {
+			return f
+		} else {
+			return nil
+		}
+	default:
+		return nil
+	}
+}
+
+func (h *Header) field(fn string, n int) Field {
+	for _, field := range h.fields {
+		if field.Name() == fn {
+			if n > 0 {
+				n--
+			} else {
+				return field
+			}
+		}
+	}
+
+	return nil
 }
