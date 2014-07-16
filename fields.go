@@ -1120,15 +1120,40 @@ func (f *ContentTransferEncoding) Parse(s string) {
 }
 
 type ContentDisposition struct {
-	HeaderField
+	MimeField
+	Disposition string
 }
 
 func NewContentDisposition() *ContentDisposition {
 	hf := HeaderField{name: ContentDispositionFieldName}
-	return &ContentDisposition{hf}
+	mf := MimeField{HeaderField: hf}
+	return &ContentDisposition{MimeField: mf}
 }
 
-func (f *ContentDisposition) Parse(value string) {
+func (f *ContentDisposition) Parse(s string) {
+	p := NewParser(s)
+
+	m := p.mark()
+	t := strings.ToLower(p.MimeToken())
+	p.Whitespace()
+	if p.NextChar() == '=' && t != "inline" && t != "attachment" {
+		p.restore(m) // handle c-d: filename=foo
+	}
+
+	if t == "" {
+		f.Error = errors.New("Invalid disposition")
+		return
+	}
+	f.parseParameters(p)
+
+	// We are required to treat unknown types as "attachment". If they
+	// are syntactically invalid, we replace them with "attachment". (RFC 2183)
+	if t != "inline" && t != "attachment" {
+		f.Disposition = "attachment"
+	} else {
+		f.Disposition = t
+	}
+	f.baseValue = f.Disposition
 }
 
 type ContentLanguage struct {
