@@ -417,6 +417,27 @@ func encodePhrase(s string) string {
 	return buf.String()
 }
 
+// This static function returns the RFC 2047-encoded version of \a s.
+func encodeText(s string) string {
+	r := []string{}
+	ws := strings.Split(s, " ")
+	for i := 0; i < len(ws); i++ {
+		l := []string{}
+		for i < len(ws) && !isAscii(ws[i]) {
+			l = append(l, ws[i])
+			i++
+		}
+		if len(l) > 0 {
+			r = append(r, encodeWord(strings.Join(l, " ")))
+		}
+		for i < len(ws) && isAscii(ws[i]) {
+			r = append(r, ws[i])
+			i++
+		}
+	}
+	return strings.Join(r, " ")
+}
+
 // This static function returns an RFC 2047 encoded-word representing \a w.
 func encodeWord(w string) string {
 	if w == "" {

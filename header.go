@@ -115,3 +115,67 @@ func (h *Header) field(fn string, n int) Field {
 
 	return nil
 }
+
+// Returns a pointer to the Content-Type header field, or a null pointer if
+// there isn't one.
+func (h *Header) ContentType() *ContentType {
+	f := h.field(ContentTypeFieldName, 0)
+	if f == nil {
+		return nil
+	}
+
+	return f.(*ContentType)
+}
+
+// Returns a pointer to the Content-Transfer-Encoding header field, or a null
+// pointer if there isn't one.
+func (h *Header) ContentTransferEncoding() *ContentTransferEncoding {
+	f := h.field(ContentTransferEncodingFieldName, 0)
+	if f == nil {
+		return nil
+	}
+
+	return f.(*ContentTransferEncoding)
+}
+
+// Returns a pointer to the Content-Disposition header field, or a null pointer
+// if there isn't one.
+func (h *Header) ContentDisposition() *ContentDisposition {
+	f := h.field(ContentDispositionFieldName, 0)
+	if f == nil {
+		return nil
+	}
+
+	return f.(*ContentDisposition)
+}
+
+// Returns the value of the Content-Description field, or an empty string if
+// there isn't one. RFC 2047 encoding is not considered - should it be?
+func (h *Header) ContentDescription() string {
+	f := h.field(ContentDescriptionFieldName, 0)
+	if f == nil {
+		return ""
+	}
+	return simplify(f.rfc822(false))
+}
+
+// Returns the value of the Content-Location field, or an empty string if there
+// isn't one. The URI is not validated in any way.
+func (h *Header) ContentLocation() string {
+	f := h.field(ContentLocationFieldName, 0)
+	if f == nil {
+		return ""
+	}
+	return f.rfc822(false)
+}
+
+// Returns a pointer to the Content-Language header field, or a null pointer if
+// there isn't one.
+func (h *Header) ContentLanguage() *ContentLanguage {
+	f := h.field(ContentLanguageFieldName, 0)
+	if f == nil {
+		return nil
+	}
+
+	return f.(*ContentLanguage)
+}
