@@ -14,6 +14,9 @@ const (
 type Header struct {
 	mode   HeaderMode
 	fields []Field
+
+	err      error
+	verified bool
 }
 
 func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
@@ -82,6 +85,13 @@ func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
 	}
 
 	return h, nil
+}
+
+// Returns true if this Header fills all the conditions laid out in RFC 2821
+// for validity, and false if not.
+func (h *Header) Valid() bool {
+	h.Verify()
+	return h.err == nil
 }
 
 func (h *Header) Add(f Field) {
@@ -178,4 +188,77 @@ func (h *Header) ContentLanguage() *ContentLanguage {
 	}
 
 	return f.(*ContentLanguage)
+}
+
+type HeaderFieldCondition struct {
+	name     string
+	min, max int
+	m        HeaderMode
+}
+
+var conditions = []HeaderFieldCondition{
+	HeaderFieldCondition{SenderFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{ReplyToFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{ToFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{CcFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{BccFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{MessageIdFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{ReferencesFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{SubjectFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{FromFieldName, 1, 1, Rfc5322Header},
+	HeaderFieldCondition{DateFieldName, 1, 1, Rfc5322Header},
+	HeaderFieldCondition{MimeVersionFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{MimeVersionFieldName, 0, 1, MimeHeader},
+	HeaderFieldCondition{ContentTypeFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{ContentTypeFieldName, 0, 1, MimeHeader},
+	HeaderFieldCondition{ContentTransferEncodingFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{ContentTransferEncodingFieldName, 0, 1, MimeHeader},
+	HeaderFieldCondition{ReturnPathFieldName, 0, 1, Rfc5322Header},
+}
+
+// This private function verifies that the entire header is consistent and
+// legal, and that each contained HeaderField is legal.
+func (h *Header) Verify() {
+	if h.verified {
+		return
+	}
+	h.verified = true
+	h.err = nil
+
+	for _, f := range h.fields {
+		if !f.Valid() {
+			h.err = fmt.Errorf("%s: %s", f.Name(), f.Error())
+			return
+		}
+	}
+
+	occurrences := make(map[string]int)
+	for _, f := range h.fields {
+		occurrences[f.Name()]++
+	}
+
+	i := 0
+	for h.err == nil && i < len(conditions) {
+		if conditions[i].m == h.mode &&
+			occurrences[conditions[i].name] < conditions[i].min ||
+			occurrences[conditions[i].name] > conditions[i].max {
+			if conditions[i].max < occurrences[conditions[i].name] {
+				h.err = fmt.Errorf("%d %s fields seen. At most %d may be present.",
+					occurrences[conditions[i].name], conditions[i].name, conditions[i].max)
+			} else {
+				h.err = fmt.Errorf("%d %s fields seen. At least %d must be present.",
+					occurrences[conditions[i].name], conditions[i].name, conditions[i].min)
+			}
+		}
+		i++
+	}
+
+	// strictly speaking, if From contains more than one address,
+	// sender should contain one. we don't enforce that, because it
+	// causes too much spam to be rejected that would otherwise go
+	// through. we'll filter spam with something that's a little less
+	// accidental, and which does not clutter up the logs with so many
+	// misleading error messages.
+
+	// we graciously ignore all the Resent-This-Or-That restrictions.
 }
