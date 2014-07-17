@@ -90,6 +90,7 @@ var isKnownField = map[string]bool{
 type Field interface {
 	Name() string
 	Value() string
+	Error() error
 
 	Parse(value string)
 	Valid() bool
@@ -101,7 +102,7 @@ type Field interface {
 type HeaderField struct {
 	name, value   string
 	UnparsedValue string
-	Error         error
+	err           error
 }
 
 func (f *HeaderField) Name() string {
@@ -110,6 +111,10 @@ func (f *HeaderField) Name() string {
 
 func (f *HeaderField) Value() string {
 	return f.value
+}
+
+func (f *HeaderField) Error() error {
+	return f.err
 }
 
 // Every HeaderField subclass must define a parse() function that takes a
@@ -200,7 +205,7 @@ func (f *HeaderField) parseText(s string) {
 	}
 
 	if !h {
-		f.Error = errors.New("Error parsing text")
+		f.err = errors.New("Error parsing text")
 	}
 }
 
@@ -298,9 +303,9 @@ func (f *HeaderField) parseContentLocation(s string) {
 	v, err := decode(buf.String(), "us-ascii")
 	f.value = v
 	if !p.AtEnd() {
-		f.Error = fmt.Errorf("Junk at position %d: %s", e, s[e:])
+		f.err = fmt.Errorf("Junk at position %d: %s", e, s[e:])
 	} else if err != nil {
-		f.Error = err
+		f.err = err
 	}
 }
 
@@ -309,7 +314,7 @@ func (f *HeaderField) parseContentLocation(s string) {
 func (f *HeaderField) parseOther(s string) {
 	v, err := decode(s, "us-ascii")
 	if err != nil {
-		f.Error = err
+		f.err = err
 	}
 	f.value = v
 }
@@ -323,7 +328,7 @@ func (f *HeaderField) parseContentBase(s string) {
 		return
 	}
 	if !strings.Contains(f.value, ":") {
-		f.Error = errors.New("URL has no scheme")
+		f.err = errors.New("URL has no scheme")
 	}
 }
 
@@ -344,13 +349,13 @@ func (f *HeaderField) parseErrorsTo(s string) {
 
 	v, err := decode(a.lpdomain(), "us-ascii")
 	f.value = v
-	f.Error = err
+	f.err = err
 }
 
 // Returns true if this header field is valid (or unparsed, as is the case for
 // all unknown fields), and false if an error was detected during parsing.
 func (f *HeaderField) Valid() bool {
-	return f.Error == nil
+	return f.err == nil
 }
 
 func (f *HeaderField) SetUnparsedValue(value string) {
@@ -465,7 +470,7 @@ func (f *AddressField) Parse(s string) {
 			// legible messages. so we'll nix out the error. Header
 			// will probably remove the field completely, since an
 			// empty Sender field isn't sensible.
-			f.Error = nil
+			f.err = nil
 		}
 	case ReturnPathFieldName:
 		f.parseMailbox(s)
@@ -475,7 +480,7 @@ func (f *AddressField) Parse(s string) {
 			// migrating from older stores. if it does, just kill
 			// it. this never happens when receiving mail, since we'll
 			// make a return-path of our own.
-			f.Error = nil
+			f.err = nil
 			f.Addresses = nil
 		}
 	case ResentSenderFieldName:
@@ -494,12 +499,12 @@ func (f *AddressField) Parse(s string) {
 				i++
 			}
 			if i < len(s) {
-				f.Error = nil
+				f.err = nil
 				f.Addresses = nil
 			}
 		}
 		if !f.Valid() && len(simplify(s)) == 1 {
-			f.Error = nil
+			f.err = nil
 			f.Addresses = nil
 		}
 		if f.Valid() && strings.Contains(s, "<>") {
@@ -528,12 +533,12 @@ func (f *AddressField) Parse(s string) {
 				// instances of garbage, but if it doesn't contain even
 				// one "@" and also not even one parsable address, surely
 				// it's garbage.
-				f.Error = nil
+				f.err = nil
 			}
 			if !f.Valid() && len(f.Addresses) <= 1 &&
 				(strings.HasPrefix(s, "@") || strings.Contains(s, "<@")) {
 				f.Addresses = nil
-				f.Error = nil
+				f.err = nil
 			}
 		}
 	case ContentIdFieldName:
@@ -555,7 +560,7 @@ func (f *AddressField) Parse(s string) {
 // problem found.
 func (f *AddressField) parseAddressList(s string) {
 	ap := NewAddressParser(s)
-	f.Error = ap.firstError
+	f.err = ap.firstError
 	f.Addresses = ap.addresses
 }
 
@@ -570,7 +575,7 @@ func (f *AddressField) parseMailboxList(s string) {
 			break
 		}
 		if a.t == EmptyGroupAddressType {
-			f.Error = fmt.Errorf("Invalid mailbox: %q", a.toString(false))
+			f.err = fmt.Errorf("Invalid mailbox: %q", a.toString(false))
 		}
 	}
 }
@@ -582,7 +587,7 @@ func (f *AddressField) parseMailbox(s string) {
 
 	// A mailbox in our world is just a mailbox-list with one entry.
 	if f.Valid() && len(f.Addresses) > 1 {
-		f.Error = errors.New("Only one address is allowed")
+		f.err = errors.New("Only one address is allowed")
 	}
 }
 
@@ -592,7 +597,7 @@ func (f *AddressField) parseMailbox(s string) {
 func (f *AddressField) parseReferences(s string) {
 	ap := references(s)
 	f.Addresses = ap.addresses
-	f.Error = ap.firstError
+	f.err = ap.firstError
 }
 
 // Parses the RFC 2822 msg-id production from \a s and/or records the first
@@ -601,20 +606,20 @@ func (f *AddressField) parseMessageId(s string) {
 	ap := references(s)
 
 	if ap.firstError != nil {
-		f.Error = ap.firstError
+		f.err = ap.firstError
 	} else if len(ap.addresses) == 1 {
 		f.Addresses = ap.addresses
 	} else {
-		f.Error = errors.New("Need exactly one")
+		f.err = errors.New("Need exactly one")
 	}
 }
 
 // Like parseMessageId( \a s ), except that it also accepts <blah>.
 func (f *AddressField) parseContentId(s string) {
 	ap := NewAddressParser(s)
-	f.Error = ap.firstError
+	f.err = ap.firstError
 	if len(ap.addresses) != 1 {
-		f.Error = errors.New("Need exactly one")
+		f.err = errors.New("Need exactly one")
 		return
 	}
 
@@ -622,13 +627,13 @@ func (f *AddressField) parseContentId(s string) {
 	case NormalAddressType:
 		f.Addresses = ap.addresses
 	case BounceAddressType:
-		f.Error = errors.New("<> is not legal, it has to be <some@thing>")
+		f.err = errors.New("<> is not legal, it has to be <some@thing>")
 	case EmptyGroupAddressType:
-		f.Error = errors.New("Error parsing Content-Id")
+		f.err = errors.New("Error parsing Content-Id")
 	case LocalAddressType:
 		f.Addresses = ap.addresses
 	case InvalidAddressType:
-		f.Error = errors.New("Error parsing Content-Id")
+		f.err = errors.New("Error parsing Content-Id")
 	}
 }
 
@@ -638,7 +643,7 @@ func (f *AddressField) parseContentId(s string) {
 func (f *AddressField) outlawBounce() {
 	for _, a := range f.Addresses {
 		if a.t == BounceAddressType {
-			f.Error = errors.New("No-bounce address not allowed in this field")
+			f.err = errors.New("No-bounce address not allowed in this field")
 		}
 	}
 }
@@ -744,7 +749,7 @@ func (f *DateField) Parse(s string) {
 			return
 		}
 	}
-	f.Error = errors.New("mail: header could not be parsed")
+	f.err = errors.New("mail: header could not be parsed")
 }
 
 type MimeParameter struct {
@@ -1018,7 +1023,7 @@ func (f *ContentType) Parse(s string) {
 				f.Subtype = "x-rfc1049-" + s
 			} else {
 				// scribe and undefined types
-				f.Error = fmt.Errorf("Invalid Content-Type: %q", s)
+				f.err = fmt.Errorf("Invalid Content-Type: %q", s)
 			}
 		} else {
 			if p.NextChar() == '/' {
@@ -1075,7 +1080,7 @@ func (f *ContentType) Parse(s string) {
 	}
 
 	if f.Type == "" || f.Subtype == "" {
-		f.Error = fmt.Errorf("Both type and subtype must be nonempty: %q" + s)
+		f.err = fmt.Errorf("Both type and subtype must be nonempty: %q" + s)
 	}
 
 	if f.Valid() && f.Type == "multipart" && f.Subtype == "appledouble" &&
@@ -1116,7 +1121,7 @@ func (f *ContentType) Parse(s string) {
 	}
 
 	if f.Valid() && f.Type == "multipart" && f.parameter("boundary") == "" {
-		f.Error = errors.New("Multipart entities must have a boundary parameter.")
+		f.err = errors.New("Multipart entities must have a boundary parameter.")
 	}
 	f.baseValue = f.Type + "/" + f.Subtype
 }
@@ -1155,7 +1160,7 @@ func (f *ContentTransferEncoding) Parse(s string) {
 		f.Encoding = BinaryEncoding
 		f.baseValue = "7bit"
 	} else {
-		f.Error = fmt.Errorf("Invalid c-t-e value: %q", t)
+		f.err = fmt.Errorf("Invalid c-t-e value: %q", t)
 	}
 }
 
@@ -1181,7 +1186,7 @@ func (f *ContentDisposition) Parse(s string) {
 	}
 
 	if t == "" {
-		f.Error = errors.New("Invalid disposition")
+		f.err = errors.New("Invalid disposition")
 		return
 	}
 	f.parseParameters(p)
@@ -1222,7 +1227,7 @@ func (f *ContentLanguage) Parse(s string) {
 	}
 
 	if !p.AtEnd() || len(f.Languages) == 0 {
-		f.Error = fmt.Errorf("Unparseable value: %q", s)
+		f.err = fmt.Errorf("Unparseable value: %q", s)
 	}
 
 	f.baseValue = strings.Join(f.Languages, ", ")
