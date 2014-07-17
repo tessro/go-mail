@@ -7,8 +7,8 @@ import (
 type HeaderMode int
 
 const (
-	HEADER_RFC5322 HeaderMode = iota
-	HEADER_MIME
+	Rfc5322Header HeaderMode = iota
+	MimeHeader
 )
 
 type Header struct {
@@ -38,7 +38,7 @@ func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
 			j++
 		}
 
-		if j == i+4 && m == HEADER_RFC5322 && strings.ToLower(rfc5322[i:j+1]) == "from " {
+		if j == i+4 && m == Rfc5322Header && strings.ToLower(rfc5322[i:j+1]) == "from " {
 			for i < end && rfc5322[i] != '\r' && rfc5322[i] != '\n' {
 				i++
 			}

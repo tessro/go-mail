@@ -39,7 +39,7 @@ type Message struct {
 
 func ReadMessage(rfc5322 string) (m *Message, err error) {
 	i := 0
-	h, err := ReadHeader(rfc5322[i:], HEADER_RFC5322)
+	h, err := ReadHeader(rfc5322[i:], Rfc5322Header)
 	if err != nil {
 		return nil, err
 	}
