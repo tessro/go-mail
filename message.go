@@ -46,11 +46,12 @@ const CRLF = "\015\012"
 type Part struct {
 	parent *Part
 
-	Header Header
+	Header *Header
 	Parts  []*Part
 }
 
 type Message struct {
+	Part
 	Rfc822Size   int
 	InternalDate int
 }
@@ -58,8 +59,17 @@ type Message struct {
 func ReadMessage(rfc5322 string) (m *Message, err error) {
 	i := 0
 	h, err := ReadHeader(rfc5322[i:], HEADER_RFC5322)
-	for _, f := range h.fields {
-		log.Printf("header: %s = %q", f.Name(), f.Value())
+	if err != nil {
+		return nil, err
 	}
+	m = &Message{}
+	m.Header = h
+
+	ct := h.ContentType()
+	if ct != nil && ct.Type == "multipart" {
+	} else {
+	}
+
+	log.Printf("ct: %s/%s %+v", ct.Type, ct.Subtype, ct.Parameters)
 	return m, nil
 }
