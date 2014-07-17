@@ -20,25 +20,6 @@ BodypartData contains data (raw body?)
 BodypartData contains text (processed body?)
 BodypartData contains Message (in case this is a message/rfc822 embedded part; holds metadata)
 
-Header contains a HeaderData
-
-HeaderData contains a list of HeaderField
-
-HeaderField contains a HeaderFieldData
-
-MimeField is a HeaderField
-MimeField contains a MimeFieldData
-
-MimeFieldData contains a list of Parameter
-
-ContentType is a MimeField
-
-ContentTransferEncoding is a MimeField
-
-ContentDisposition is a MimeField
-
-ContentLanguage is a MimeField
-
 */
 
 const CRLF = "\015\012"
