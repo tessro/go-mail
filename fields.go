@@ -99,6 +99,16 @@ type Field interface {
 	rfc822(avoidUtf8 bool) string
 }
 
+type Fields []Field
+
+func (fs *Fields) Remove(r Field) {
+	for i, f := range *fs {
+		if f == r {
+			*fs = append((*fs)[:i], (*fs)[i+1:]...)
+		}
+	}
+}
+
 type HeaderField struct {
 	name, value   string
 	UnparsedValue string

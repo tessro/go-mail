@@ -13,7 +13,7 @@ const (
 
 type Header struct {
 	mode   HeaderMode
-	fields []Field
+	fields Fields
 
 	err      error
 	verified bool
