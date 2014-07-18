@@ -110,10 +110,14 @@ type Field interface {
 
 type Fields []Field
 
+func (fs *Fields) RemoveAt(i int) {
+	*fs = append((*fs)[:i], (*fs)[i+1:]...)
+}
+
 func (fs *Fields) Remove(r Field) {
 	for i, f := range *fs {
 		if f == r {
-			*fs = append((*fs)[:i], (*fs)[i+1:]...)
+			fs.RemoveAt(i)
 		}
 	}
 }
