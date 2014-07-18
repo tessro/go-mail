@@ -243,7 +243,7 @@ func (f *HeaderField) parseMimeVersion(s string) {
 	p.Comment()
 	v := p.DotAtom()
 	p.Comment()
-	c, err := decode(p.lc, "us-ascii")
+	c, err := decode(simplify(p.lc), "us-ascii")
 	if err != nil || strings.ContainsAny(c, "()\\") {
 		c = ""
 	}
@@ -252,7 +252,7 @@ func (f *HeaderField) parseMimeVersion(s string) {
 	}
 	result := "1.0"
 	if c != "" {
-		result += "(" + c + ")"
+		result += " (" + c + ")"
 	}
 	f.value = result
 }
