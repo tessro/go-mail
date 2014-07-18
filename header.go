@@ -98,20 +98,6 @@ func (h *Header) Add(f Field) {
 	h.fields = append(h.fields, f)
 }
 
-func (h *Header) addressField(fn string, n int) Field {
-	switch fn {
-	case FromFieldName, ResentFromFieldName, SenderFieldName, ResentSenderFieldName:
-		f, ok := h.field(fn, n).(*AddressField)
-		if ok {
-			return f
-		} else {
-			return nil
-		}
-	default:
-		return nil
-	}
-}
-
 func (h *Header) field(fn string, n int) Field {
 	for _, field := range h.fields {
 		if field.Name() == fn {
@@ -124,6 +110,35 @@ func (h *Header) field(fn string, n int) Field {
 	}
 
 	return nil
+}
+
+// Returns a pointer to the address field of type \a t at index \a n in this
+// header, or a null pointer if no such field exists.
+func (h *Header) addressField(fn string, n int) *AddressField {
+	switch fn {
+	case FromFieldName, ResentFromFieldName, SenderFieldName, ResentSenderFieldName,
+		ReturnPathFieldName, ReplyToFieldName, ToFieldName, CcFieldName, BccFieldName,
+		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIdFieldName,
+		ContentIdFieldName, ResentMessageIdFieldName, ReferencesFieldName:
+		f, _ := h.field(fn, n).(*AddressField)
+		return f
+	}
+	return nil
+}
+
+// Returns a pointer to the addresses in the \a t header field, which must be
+// an address field such as From or Bcc. If not, or if the field is empty,
+// addresses() returns a null pointer.
+func (h *Header) addresses(fn string) []Address {
+	as := []Address{}
+	af := h.addressField(fn, 0)
+	if af != nil {
+		as = af.Addresses
+	}
+	if len(as) == 0 {
+		as = nil
+	}
+	return as
 }
 
 // Returns a pointer to the Content-Type header field, or a null pointer if
