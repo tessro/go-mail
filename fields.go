@@ -49,42 +49,51 @@ const (
 	ErrorsToFieldName                = "Errors-To"
 )
 
-var isKnownField = map[string]bool{
-	FromFieldName:                    true,
-	ResentFromFieldName:              true,
-	SenderFieldName:                  true,
-	ResentSenderFieldName:            true,
-	ReturnPathFieldName:              true,
-	ReplyToFieldName:                 true,
-	ToFieldName:                      true,
-	CcFieldName:                      true,
-	BccFieldName:                     true,
-	ResentToFieldName:                true,
-	ResentCcFieldName:                true,
-	ResentBccFieldName:               true,
-	MessageIdFieldName:               true,
-	ResentMessageIdFieldName:         true,
-	InReplyToFieldName:               true,
-	ReferencesFieldName:              true,
-	DateFieldName:                    true,
-	OrigDateFieldName:                true,
-	ResentDateFieldName:              true,
-	SubjectFieldName:                 true,
-	CommentsFieldName:                true,
-	KeywordsFieldName:                true,
-	ContentTypeFieldName:             true,
-	ContentTransferEncodingFieldName: true,
-	ContentDispositionFieldName:      true,
-	ContentDescriptionFieldName:      true,
-	ContentIdFieldName:               true,
-	MimeVersionFieldName:             true,
-	ReceivedFieldName:                true,
-	ContentLanguageFieldName:         true,
-	ContentLocationFieldName:         true,
-	ContentMd5FieldName:              true,
-	ListIdFieldName:                  true,
-	ContentBaseFieldName:             true,
-	ErrorsToFieldName:                true,
+var fieldNames = []string{
+	FromFieldName,
+	ResentFromFieldName,
+	SenderFieldName,
+	ResentSenderFieldName,
+	ReturnPathFieldName,
+	ReplyToFieldName,
+	ToFieldName,
+	CcFieldName,
+	BccFieldName,
+	ResentToFieldName,
+	ResentCcFieldName,
+	ResentBccFieldName,
+	MessageIdFieldName,
+	ResentMessageIdFieldName,
+	InReplyToFieldName,
+	ReferencesFieldName,
+	DateFieldName,
+	OrigDateFieldName,
+	ResentDateFieldName,
+	SubjectFieldName,
+	CommentsFieldName,
+	KeywordsFieldName,
+	ContentTypeFieldName,
+	ContentTransferEncodingFieldName,
+	ContentDispositionFieldName,
+	ContentDescriptionFieldName,
+	ContentIdFieldName,
+	MimeVersionFieldName,
+	ReceivedFieldName,
+	ContentLanguageFieldName,
+	ContentLocationFieldName,
+	ContentMd5FieldName,
+	ListIdFieldName,
+	ContentBaseFieldName,
+	ErrorsToFieldName,
+}
+
+var isKnownField map[string]bool
+
+func init() {
+	isKnownField = make(map[string]bool)
+	for _, n := range fieldNames {
+		isKnownField[n] = true
+	}
 }
 
 type Field interface {
