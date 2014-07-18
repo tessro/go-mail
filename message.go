@@ -45,6 +45,7 @@ func ReadMessage(rfc5322 string) (m *Message, err error) {
 	}
 	m = &Message{}
 	m.Header = h
+	h.Repair()
 
 	ct := h.ContentType()
 	if ct != nil && ct.Type == "multipart" {

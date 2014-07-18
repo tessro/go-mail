@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -276,4 +277,183 @@ func (h *Header) Verify() {
 	// misleading error messages.
 
 	// we graciously ignore all the Resent-This-Or-That restrictions.
+}
+
+// Repairs problems that can be repaired without knowing the associated
+// bodypart.
+func (h *Header) Repair() {
+	if h.Valid() {
+		return
+	}
+
+	// We remove duplicates of any field that may occur only once.
+	// (Duplication has been observed for Date/Subject/M-V/C-T-E/C-T/M-I.)
+
+	occurrences := make(map[string]int)
+	for _, f := range h.fields {
+		occurrences[f.Name()]++
+	}
+
+	i := 0
+	for i < len(conditions) {
+		if conditions[i].m == h.mode &&
+			occurrences[conditions[i].name] > conditions[i].max {
+			n := 0
+			j := 0
+			hf := h.field(conditions[i].name, 0)
+			for j < len(h.fields) {
+				if h.fields[j].Name() == conditions[i].name {
+					n++
+					if n > 1 && hf.rfc822(false) == h.fields[j].rfc822(false) {
+						h.fields.RemoveAt(j)
+					} else {
+						j++
+					}
+				} else {
+					j++
+				}
+			}
+		}
+		i++
+	}
+
+	// If there are several content-type fields, and they agree except
+	// that one has options and the others not, remove the option-less
+	// ones.
+
+	if occurrences[ContentTypeFieldName] > 1 {
+		ct := h.ContentType()
+		other := ct
+		var good *ContentType
+		n := 0
+		bad := false
+		for other != nil && !bad {
+			if other.Type != ct.Type ||
+				other.Subtype != ct.Subtype {
+				bad = true
+			} else if len(other.Parameters) > 0 {
+				if good != nil {
+					bad = true
+				}
+				good = other
+			}
+			n++
+			tmp := h.field(ContentTypeFieldName, n)
+			if tmp != nil {
+				other = tmp.(*ContentType)
+			} else {
+				other = nil
+			}
+		}
+		if good != nil && !bad {
+			i := 0
+			for i < len(h.fields) {
+				if h.fields[i].Name() == ContentTypeFieldName && h.fields[i] != good {
+					h.fields.RemoveAt(i)
+				} else {
+					i++
+				}
+			}
+		}
+	}
+
+	// We retain only the first valid Date field, Return-Path,
+	// Message-Id, References and Content-Type fields. If there is one
+	// or more valid such field, we delete all invalid fields,
+	// otherwise we leave the fields as they are.
+
+	// For most of these, we also delete subsequent valid fields. For
+	// Content-Type we only delete invalid fields, since there isn't
+	// any strong reason to believe that the one we would keep enables
+	// correct interpretation of the body.
+
+	// Several senders appear to send duplicate dates. qmail is
+	// mentioned in the references chains of most examples we have.
+
+	// We don't know who adds duplicate message-id, return-path and
+	// content-type fields.
+
+	// The only case we've seen of duplicate references involved
+	// Thunderbird 1.5.0.4 and Scalix. Uncertain whose
+	// bug. Thunderbird 1.5.0.5 looks correct.
+
+	for _, name := range fieldNames {
+		if occurrences[name] > 1 &&
+			(name == DateFieldName ||
+				name == ReturnPathFieldName ||
+				name == MessageIdFieldName ||
+				name == ContentTypeFieldName ||
+				name == ReferencesFieldName) {
+			var firstValid Field
+			for _, f := range h.fields {
+				if f.Name() == name && f.Valid() {
+					firstValid = f
+					break
+				}
+			}
+			if firstValid != nil {
+				alsoValid := true
+				if name == ContentTypeFieldName {
+					alsoValid = false
+				}
+				i := 0
+				for i < len(h.fields) {
+					if h.fields[i].Name() == name && h.fields[i] != firstValid &&
+						(alsoValid || !h.fields[i].Valid()) {
+						h.fields.RemoveAt(i)
+					} else {
+						i++
+					}
+				}
+			}
+		}
+	}
+
+	// Mime-Version is occasionally seen more than once, usually on
+	// spam or mainsleaze.
+	if h.field(MimeVersionFieldName, 1) != nil {
+		h.fields.Remove(h.field(MimeVersionFieldName, 1))
+		fmv := h.field(MimeVersionFieldName, 0)
+		fmv.Parse(fmt.Sprintf("1.0 (Note: original message contained %d Mime-Version fields)", occurrences[MimeVersionFieldName]))
+	}
+
+	// Content-Transfer-Encoding: should not occur on multiparts, and
+	// when it does it usually has a syntax error. We don't care about
+	// that error.
+	if occurrences[ContentTransferEncodingFieldName] > 0 {
+		ct := h.ContentType()
+		if ct != nil && ct.Type == "multipart" || ct.Type == "message" {
+			h.fields.RemoveAllNamed(ContentTransferEncodingFieldName)
+		}
+	}
+
+	// Sender sometimes is a straight copy of From, even if From
+	// contains more than one address. If it's a copy, or even an
+	// illegal subset, we drop it.
+
+	senders := h.addresses(SenderFieldName)
+
+	if occurrences[SenderFieldName] > 0 && len(senders) != 1 {
+		from := make(map[string]bool)
+		for _, a := range h.addresses(FromFieldName) {
+			from[strings.ToLower(a.lpdomain())] = true
+		}
+
+		sender := []string{}
+		for _, a := range h.addresses(FromFieldName) {
+			sender = append(sender, strings.ToLower(a.lpdomain()))
+		}
+
+		i := 0
+		difference := false
+		for i < len(sender) && difference {
+			if !from[sender[i]] {
+				difference = true
+			}
+			i++
+		}
+		if !difference {
+			h.fields.RemoveAllNamed(SenderFieldName)
+		}
+	}
 }

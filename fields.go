@@ -122,6 +122,17 @@ func (fs *Fields) Remove(r Field) {
 	}
 }
 
+func (fs *Fields) RemoveAllNamed(name string) {
+	i := 0
+	for i < len(*fs) {
+		if (*fs)[i].Name() == name {
+			fs.RemoveAt(i)
+		} else {
+			i++
+		}
+	}
+}
+
 type HeaderField struct {
 	name, value   string
 	UnparsedValue string
