@@ -384,6 +384,60 @@ func de64(s string) string {
 	return buf.String()
 }
 
+const to64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+// Encodes this string using the base-64 algorithm and returns the result in
+// lines of at most \a lineLength characters. If \a lineLength is not supplied,
+// e64() returns a single line devoid of whitespace.
+func e64(s string, lineLength int) string {
+	// this code comes from mailchen, adapted
+	l := len(s)
+	i := 0
+	buf := bytes.NewBuffer(make([]byte, 0, l*2))
+	c := 0
+	for i <= l-3 {
+		buf.WriteByte(to64[(s[i]>>2)&63])
+		buf.WriteByte(to64[((s[i]<<4)&48)+((s[i+1]>>4)&15)])
+		buf.WriteByte(to64[((s[i+1]<<2)&60)+((s[i+2]>>6)&3)])
+		buf.WriteByte(to64[s[i+2]&63])
+		i += 3
+		c += 4
+		if lineLength > 0 && c >= lineLength {
+			buf.WriteByte(13)
+			buf.WriteByte(10)
+			c = 0
+		}
+	}
+	if i < l {
+		i0 := s[i]
+		i1 := byte(0)
+		i2 := byte(0)
+		if i+1 < l {
+			i1 = s[i+1]
+		}
+		if i+2 < l {
+			i2 = s[i+2]
+		}
+		buf.WriteByte(to64[(i0>>2)&63])
+		buf.WriteByte(to64[((i0<<4)&48)+((i1>>4)&15)])
+		if i+1 < l {
+			buf.WriteByte(to64[((i1<<2)&60)+((i2>>6)&3)])
+		} else {
+			buf.WriteByte('=')
+		}
+		if i+2 < l {
+			buf.WriteByte(to64[i2&63])
+		} else {
+			buf.WriteByte('=')
+		}
+	}
+	if lineLength > 0 && c > 0 {
+		buf.WriteByte(13)
+		buf.WriteByte(10)
+	}
+	return buf.String()
+}
+
 // Decodes this string according to the quoted-printable algorithm, and returns
 // the result. Errors are overlooked, to cope with all the mail-munging
 // brokenware in the great big world.
