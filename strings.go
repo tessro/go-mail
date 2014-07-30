@@ -495,6 +495,131 @@ func deQP(s string, underscore bool) string {
 	return buf.String()
 }
 
+const qphexdigits = "0123456789ABCDEF"
+
+// Encodes this string using the quoted-printable algorithm and returns the
+// encoded version. In the encoded version, all line feeds are CRLF, and soft
+// line feeds are positioned so that the q-p looks as good as it can.
+//
+// Note that this function is slightly incompatible with RFC 2646: It encodes
+// trailing spaces, as suggested in RFC 2045, but RFC 2646 suggest that if
+// trailing spaces are the only reason to q-p, then the message should not be
+// encoded.
+//
+// If \a underscore is present and true, this function uses the variant of q-p
+// specified by RFC 2047, where a space is encoded as an underscore and a few
+// more characters need to be encoded.
+//
+// If \a from is present and true, this function also makes sure that no output
+// line starts with "From " or looks like a MIME boundary.
+func eQP(s string, underscore, from bool) string {
+	if s == "" {
+		return s
+	}
+
+	i := 0
+	l := 0
+	// no input character can use more than six output characters (= CR LF = 3 D),
+	// so we can allocate as much space as we could possibly need.
+	buf := make([]byte, len(s)*6)
+	c := 0
+	for i < len(s) {
+		if s[i] == 10 ||
+			(i < len(s)-1 && s[i] == 13 && s[i+1] == 10) {
+			// we have a line feed. if the last character on the line
+			// was a space, we need to quote that to protect it.
+			if l > 0 && buf[l-1] == ' ' {
+				buf[l-1] = '='
+				buf[l] = '2'
+				l++
+				buf[l] = '0'
+				l++
+			}
+			c = 0
+			if s[i] == 13 {
+				buf[l] = s[i]
+				l++
+				i++
+			}
+			buf[l] = 10
+			l++
+			// worst case: five bytes
+		} else {
+			if c > 72 {
+				j := 1
+				for j < 10 && buf[l-j] != ' ' {
+					j++
+				}
+				if j >= 10 {
+					j = 0
+				} else {
+					j--
+				}
+				k := 1
+				for k <= j {
+					buf[l-k+3] = buf[l-k]
+					k++
+				}
+				// always CRLF for soft linefeed
+				buf[l-j] = '='
+				l++
+				buf[l-j] = 13
+				l++
+				buf[l-j] = 10
+				l++
+				c = j
+			}
+
+			if underscore && s[i] == ' ' {
+				buf[l] = '_'
+				l++
+				c++
+			} else if underscore &&
+				!((s[i] >= '0' && s[i] <= '9') ||
+					(s[i] >= 'a' && s[i] <= 'z') ||
+					(s[i] >= 'A' && s[i] <= 'Z')) {
+				buf[l] = '='
+				l++
+				buf[l] = qphexdigits[s[i]/16]
+				l++
+				buf[l] = qphexdigits[s[i]%16]
+				l++
+				c += 3
+			} else if from && c == 0 && maybeBoundary(s, i) {
+				buf[l] = '='
+				l++
+				buf[l] = qphexdigits[s[i]/16]
+				l++
+				buf[l] = qphexdigits[s[i]%16]
+				l++
+				c += 3
+			} else if from && c == 0 && len(s) >= i+5 && s[i:i+5] == "From " {
+				buf[l] = '='
+				l++
+				buf[l] = qphexdigits[s[i]/16]
+				l++
+				buf[l] = qphexdigits[s[i]%16]
+				l++
+				c += 3
+			} else if (s[i] >= ' ' && s[i] < 127 && s[i] != '=') || s[i] == '\t' {
+				buf[l] = s[i]
+				l++
+				c++
+			} else {
+				buf[l] = '='
+				l++
+				buf[l] = qphexdigits[s[i]/16]
+				l++
+				buf[l] = qphexdigits[s[i]%16]
+				l++
+				c += 3
+			}
+		}
+		i++
+	}
+	return string(buf[:l])
+}
+
 func decode(s string, enc string) (string, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
 	cw, err := charset.NewWriter(enc, buf)
