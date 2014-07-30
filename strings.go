@@ -620,6 +620,43 @@ func eQP(s string, underscore, from bool) string {
 	return string(buf[:l])
 }
 
+func maybeBoundary(s string, i int) bool {
+	if len(s) < i+2 {
+		return false
+	}
+	if s[i] != '-' || s[i+1] != '-' {
+		return false
+	}
+
+	for i < len(s) && s[i] >= ' ' {
+		//bchars := bcharsnospace / " "
+		//bcharsnospace := DIGIT / ALPHA / "'" / "(" / ")" /
+		//                 "+" / "_" / "," / "-" / "." /
+		//                 "/" / ":" / "=" / "?"
+		switch s[i] {
+		case 'a', 'b', 'c', 'd', 'e', 'f', 'g',
+			'h', 'i', 'j', 'k', 'l', 'm', 'n',
+			'o', 'p', 'q', 'r', 's', 't', 'u',
+			'v', 'w', 'x', 'y', 'z',
+			'A', 'B', 'C', 'D', 'E', 'F', 'G',
+			'H', 'I', 'J', 'K', 'L', 'M', 'N',
+			'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+			'V', 'W', 'X', 'Y', 'Z',
+			'0', '1', '2', '3', '4', '5', '6',
+			'7', '8', '9',
+			'\'',
+			'(', ')', '+', '_', ',', '-', '.',
+			'/', ':', '=', '?',
+			' ':
+			// ok
+		default:
+			return false
+		}
+		i++
+	}
+	return true
+}
+
 // This function returns true if the string would need to be encoded using
 // quoted-printable. It is a greatly simplified copy of eQP(), with the changes
 // made necessary by RFC 2646.
