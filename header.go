@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -13,9 +14,20 @@ const (
 	MimeHeader
 )
 
+type DefaultContentType int
+
+const (
+	MessageRfc822ContentType DefaultContentType = iota
+	TextPlainContentType
+)
+
 type Header struct {
+	DefaultType DefaultContentType
+
 	mode   HeaderMode
 	Fields Fields
+
+	numBytes int
 
 	err      error
 	verified bool
@@ -85,6 +97,15 @@ func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
 			done = true
 		}
 	}
+
+	// PR: chomped second newline at header end
+	if i+1 < len(rfc5322) && rfc5322[i] == '\r' && rfc5322[i+1] == '\n' {
+		i += 2
+	} else if i < len(rfc5322) && rfc5322[i] == '\n' {
+		i++
+	}
+
+	h.numBytes = i
 
 	return h, nil
 }
@@ -626,4 +647,33 @@ func (h *Header) Repair() {
 			h.Fields.RemoveAllNamed(SenderFieldName)
 		}
 	}
+}
+
+// Returns the canonical text representation of this Header.  Downgrades rather
+// than including UTF-8 if \a avoidUtf8 is true.
+func (h *Header) asText(avoidUtf8 bool) string {
+	buf := bytes.NewBuffer(make([]byte, 0, len(h.Fields)*100))
+
+	for _, f := range h.Fields {
+		h.appendField(buf, f, avoidUtf8)
+	}
+
+	return buf.String()
+}
+
+// Appends the string representation of the field \a hf to \a r. Does nothing
+// if \a f is nil.
+//
+// This function doesn't wrap. That's probably a bug. How to fix it?
+//
+// (The details of the function are liable to change.)
+func (h *Header) appendField(buf *bytes.Buffer, f Field, avoidUtf8 bool) {
+	if f == nil {
+		return
+	}
+
+	buf.WriteString(f.Name())
+	buf.WriteString(": ")
+	buf.WriteString(f.rfc822(avoidUtf8))
+	buf.WriteString(CRLF)
 }
