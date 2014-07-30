@@ -175,6 +175,19 @@ func trim(str string) string {
 	return strings.Trim(str, "\t\r\n ")
 }
 
+// Returns a copy of this EString with at most one trailing LF or CRLF removed.
+// If there's more than one LF or CRLF, the remainder are left.
+func stripCRLF(s string) string {
+	n := 0
+	if strings.HasSuffix(s, "\r\n") {
+		n = 2
+	} else if strings.HasSuffix(s, "\n") {
+		n = 1
+	}
+
+	return s[:len(s)-n]
+}
+
 // Returns an \a e encoded version of this EString. If \a e is Base64, then \a
 // n specifies the maximum line length.  The default is 0, i.e. no limit.
 //
