@@ -204,6 +204,8 @@ func (a *Address) needsUnicode() bool {
 	return true
 }
 
+type Addresses []Address
+
 // The AddressParser class helps parse email addresses and lists.
 //
 // In the interests of simplicity, AddressParser parses everything as
@@ -226,7 +228,7 @@ type AddressParser struct {
 	s           string
 	firstError  error
 	recentError error
-	addresses   []Address
+	addresses   Addresses
 	lastComment string
 }
 
@@ -275,7 +277,7 @@ func NewAddressParser(s string) AddressParser {
 			i = p.space(i)
 		}
 	}
-	p.uniquify()
+	p.addresses.Uniquify()
 	if i < 0 && p.firstError == nil {
 		return p
 	}
@@ -334,7 +336,7 @@ func NewAddressParser(s string) AddressParser {
 	if len(p.addresses) > 0 {
 		p.firstError = nil
 		p.recentError = nil
-		p.uniquify()
+		p.addresses.Uniquify()
 		return p
 	}
 
@@ -1261,18 +1263,18 @@ func (p *AddressParser) setError(s string, i int) {
 }
 
 // Removes any addresses that exist twice in the list.
-func (p *AddressParser) uniquify() {
+func (as *Addresses) Uniquify() {
 	key := func(a Address) string {
 		return fmt.Sprintf("%s@%s", strings.ToTitle(a.localpart), strings.ToTitle(a.domain))
 	}
 
-	if len(p.addresses) == 0 {
+	if len(*as) == 0 {
 		return
 	}
 
 	dict := make(map[string]int)
 	unique := []Address{}
-	for _, a := range p.addresses {
+	for _, a := range *as {
 		k := key(a)
 		ix, ok := dict[k]
 		if !ok {
@@ -1282,5 +1284,5 @@ func (p *AddressParser) uniquify() {
 			unique[ix] = a
 		}
 	}
-	p.addresses = unique
+	*as = unique
 }

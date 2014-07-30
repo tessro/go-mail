@@ -398,7 +398,7 @@ func (f *HeaderField) SetUnparsedValue(value string) {
 
 type AddressField struct {
 	HeaderField
-	Addresses []Address
+	Addresses Addresses
 }
 
 func NewAddressField(name string) *AddressField {
