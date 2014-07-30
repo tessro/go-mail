@@ -85,10 +85,10 @@ func (m *Message) Body(avoidUtf8 bool) string {
 // null pointer if \a s is not valid and \a create is false.
 func (m *Message) BodyPart(s string, create bool) *Part {
 	b := 0
-	bp := &Part{}
+	var bp *Part
 	for b < len(s) {
 		e := b
-		for s[e] >= '0' && s[e] <= 9 {
+		for e < len(s) && s[e] >= '0' && s[e] <= '9' {
 			e++
 		}
 		if e < len(s) && s[e] != '.' {
