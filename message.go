@@ -5,24 +5,6 @@ import (
 	"strconv"
 )
 
-/*
-
-Message is a Multipart
-Message contains a MessageData
-
-Multipart contains a Header
-Multipart contains a Multipart (parent)
-Multipart contains a list of Bodypart (children)
-
-Bodypart is a Multipart
-Bodypart contains a BodypartData
-
-BodypartData contains data (raw body?)
-BodypartData contains text (processed body?)
-BodypartData contains Message (in case this is a message/rfc822 embedded part; holds metadata)
-
-*/
-
 const CRLF = "\015\012"
 
 type Message struct {
