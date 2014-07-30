@@ -218,6 +218,91 @@ func section(str, s string, n int) string {
 	return ""
 }
 
+// An implementation of uudecode, sufficient to handle some occurences of
+// "content-transfer-encoding: x-uuencode" seen. Possibly not correct according
+// to POSIX 1003.2b, who knows.
+func deUue(s string) string {
+	if s == "" {
+		return s
+	}
+	i := 0
+	if !strings.HasPrefix(s, "begin") {
+		begin := strings.Index(s, "\nbegin")
+		if begin < 0 {
+			begin = strings.Index(s, "\rbegin")
+		}
+		if begin < 0 {
+			return s
+		}
+		i = begin + 1
+	}
+	var buf bytes.Buffer
+	for i < len(s) {
+		// step 0. skip over nonspace until CR/LF
+		for i < len(s) && s[i] != 13 && s[i] != 10 {
+			i++
+		}
+		// step 1. skip over whitespace to the next length marker.
+		for i < len(s) &&
+			(s[i] == 9 || s[i] == 10 ||
+				s[i] == 13 || s[i] == 32) {
+			i++
+		}
+		// step 2. the length byte, or the end line.
+		linelength := byte(0)
+		if i < len(s) {
+			c := s[i]
+			if c == 'e' && i < len(s)-2 &&
+				s[i+1] == 'n' && s[i+2] == 'd' &&
+				(i+3 == len(s) ||
+					s[i+3] == 13 || s[i+3] == 10 ||
+					s[i+3] == 9 || s[i+3] == 32) {
+				return buf.String()
+			} else if c < 32 {
+				return s
+			} else {
+				linelength = (c - 32) & 63
+			}
+			i++
+		}
+		// step 3. the line data. we assume it's in groups of 4 tokens.
+		for linelength > 0 && i < len(s) {
+			c0 := byte(0)
+			c1 := byte(0)
+			c2 := byte(0)
+			c3 := byte(0)
+			if i < len(s) {
+				c0 = 63 & (s[i] - 32)
+			}
+			if i+1 < len(s) {
+				c1 = 63 & (s[i+1] - 32)
+			}
+			if i+1 < len(s) {
+				c2 = 63 & (s[i+2] - 32)
+			}
+			if i+1 < len(s) {
+				c3 = 63 & (s[i+3] - 32)
+			}
+			i += 4
+			if linelength > 0 {
+				buf.WriteByte(((c0 << 2) | (c1 >> 4)) & 255)
+				linelength--
+			}
+			if linelength > 0 {
+				buf.WriteByte(((c1 << 4) | (c2 >> 2)) & 255)
+				linelength--
+			}
+			if linelength > 0 {
+				buf.WriteByte(((c2 << 6) | (c3)) & 255)
+				linelength--
+			}
+		}
+	}
+	// we ran off the end without seeing an end line. what to do?
+	// return what we've seen so far?
+	return buf.String()
+}
+
 var from64 = []uint8{
 	64, 99, 99, 99, 99, 99, 99, 99,
 	65, 99, 65, 99, 99, 65, 99, 99,
