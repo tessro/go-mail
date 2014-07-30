@@ -620,6 +620,35 @@ func eQP(s string, underscore, from bool) string {
 	return string(buf[:l])
 }
 
+// This function returns true if the string would need to be encoded using
+// quoted-printable. It is a greatly simplified copy of eQP(), with the changes
+// made necessary by RFC 2646.
+func needsQP(s string) bool {
+	i := 0
+	c := 0
+	for i < len(s) {
+		if c == 0 && maybeBoundary(s, i) {
+			return true
+		}
+		if c == 0 && len(s) > i+1 && s[i] == 'F' && s[i+1] == 'r' {
+			return true
+		}
+		if s[i] == 10 {
+			c = 0
+		} else if c > 78 {
+			return true
+		} else if (s[i] >= ' ' && s[i] < 127) ||
+			(s[i] == '\t') ||
+			(len(s) > i+1 && s[i] == 13 && s[i+1] == 10) {
+			c++
+		} else {
+			return true
+		}
+		i++
+	}
+	return false
+}
+
 func decode(s string, enc string) (string, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
 	cw, err := charset.NewWriter(enc, buf)
