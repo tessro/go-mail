@@ -14,7 +14,7 @@ const (
 
 type Header struct {
 	mode   HeaderMode
-	fields Fields
+	Fields Fields
 
 	err      error
 	verified bool
@@ -96,11 +96,11 @@ func (h *Header) Valid() bool {
 }
 
 func (h *Header) Add(f Field) {
-	h.fields = append(h.fields, f)
+	h.Fields = append(h.Fields, f)
 }
 
 func (h *Header) field(fn string, n int) Field {
-	for _, field := range h.fields {
+	for _, field := range h.Fields {
 		if field.Name() == fn {
 			if n > 0 {
 				n--
@@ -241,7 +241,7 @@ func (h *Header) Verify() {
 	h.verified = true
 	h.err = nil
 
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		if !f.Valid() {
 			h.err = fmt.Errorf("%s: %s", f.Name(), f.Error())
 			return
@@ -249,7 +249,7 @@ func (h *Header) Verify() {
 	}
 
 	occurrences := make(map[string]int)
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		occurrences[f.Name()]++
 	}
 
@@ -290,7 +290,7 @@ func (h *Header) Repair() {
 	// (Duplication has been observed for Date/Subject/M-V/C-T-E/C-T/M-I.)
 
 	occurrences := make(map[string]int)
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		occurrences[f.Name()]++
 	}
 
@@ -301,11 +301,11 @@ func (h *Header) Repair() {
 			n := 0
 			j := 0
 			hf := h.field(conditions[i].name, 0)
-			for j < len(h.fields) {
-				if h.fields[j].Name() == conditions[i].name {
+			for j < len(h.Fields) {
+				if h.Fields[j].Name() == conditions[i].name {
 					n++
-					if n > 1 && hf.rfc822(false) == h.fields[j].rfc822(false) {
-						h.fields.RemoveAt(j)
+					if n > 1 && hf.rfc822(false) == h.Fields[j].rfc822(false) {
+						h.Fields.RemoveAt(j)
 					} else {
 						j++
 					}
@@ -347,9 +347,9 @@ func (h *Header) Repair() {
 		}
 		if good != nil && !bad {
 			i := 0
-			for i < len(h.fields) {
-				if h.fields[i].Name() == ContentTypeFieldName && h.fields[i] != good {
-					h.fields.RemoveAt(i)
+			for i < len(h.Fields) {
+				if h.Fields[i].Name() == ContentTypeFieldName && h.Fields[i] != good {
+					h.Fields.RemoveAt(i)
 				} else {
 					i++
 				}
@@ -385,7 +385,7 @@ func (h *Header) Repair() {
 				name == ContentTypeFieldName ||
 				name == ReferencesFieldName) {
 			var firstValid Field
-			for _, f := range h.fields {
+			for _, f := range h.Fields {
 				if f.Name() == name && f.Valid() {
 					firstValid = f
 					break
@@ -397,10 +397,10 @@ func (h *Header) Repair() {
 					alsoValid = false
 				}
 				i := 0
-				for i < len(h.fields) {
-					if h.fields[i].Name() == name && h.fields[i] != firstValid &&
-						(alsoValid || !h.fields[i].Valid()) {
-						h.fields.RemoveAt(i)
+				for i < len(h.Fields) {
+					if h.Fields[i].Name() == name && h.Fields[i] != firstValid &&
+						(alsoValid || !h.Fields[i].Valid()) {
+						h.Fields.RemoveAt(i)
 					} else {
 						i++
 					}
@@ -412,7 +412,7 @@ func (h *Header) Repair() {
 	// Mime-Version is occasionally seen more than once, usually on
 	// spam or mainsleaze.
 	if h.field(MimeVersionFieldName, 1) != nil {
-		h.fields.Remove(h.field(MimeVersionFieldName, 1))
+		h.Fields.Remove(h.field(MimeVersionFieldName, 1))
 		fmv := h.field(MimeVersionFieldName, 0)
 		fmv.Parse(fmt.Sprintf("1.0 (Note: original message contained %d Mime-Version fields)", occurrences[MimeVersionFieldName]))
 	}
@@ -423,7 +423,7 @@ func (h *Header) Repair() {
 	if occurrences[ContentTransferEncodingFieldName] > 0 {
 		ct := h.ContentType()
 		if ct != nil && ct.Type == "multipart" || ct.Type == "message" {
-			h.fields.RemoveAllNamed(ContentTransferEncodingFieldName)
+			h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
 		}
 	}
 
@@ -453,7 +453,7 @@ func (h *Header) Repair() {
 			i++
 		}
 		if !difference {
-			h.fields.RemoveAllNamed(SenderFieldName)
+			h.Fields.RemoveAllNamed(SenderFieldName)
 		}
 	}
 }
