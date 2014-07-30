@@ -739,11 +739,12 @@ func references(r string) AddressParser {
 
 type DateField struct {
 	HeaderField
+	Date *time.Time
 }
 
 func NewDateField() *DateField {
 	hf := HeaderField{name: DateFieldName}
-	return &DateField{hf}
+	return &DateField{HeaderField: hf}
 }
 
 // Layouts suitable for passing to time.Parse.
@@ -774,14 +775,23 @@ func init() {
 	}
 }
 
-// TODO: Evaluate aox implementation, might be more lenient
-func (f *DateField) Parse(s string) {
+func parseDate(s string) *time.Time {
 	for _, layout := range dateLayouts {
 		t, err := time.Parse(layout, s)
 		if err == nil {
-			f.value = t.Format("Mon, 02 Jan 2006 15:04:05 -0700")
-			return
+			return &t
 		}
+	}
+	return nil
+}
+
+// TODO: Evaluate aox implementation, might be more lenient
+func (f *DateField) Parse(s string) {
+	t := parseDate(s)
+	if t != nil {
+		f.value = t.Format("Mon, 02 Jan 2006 15:04:05 -0700")
+		f.Date = t
+		return
 	}
 	f.err = errors.New("mail: header could not be parsed")
 }

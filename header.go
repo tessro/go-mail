@@ -3,6 +3,7 @@ package mail
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type HeaderMode int
@@ -125,6 +126,17 @@ func (h *Header) addressField(fn string, n int) *AddressField {
 		return f
 	}
 	return nil
+}
+
+// Returns the header's data \a t, which is the normal date by default, but can
+// also be orig-date or resent-date. If there is no such field or \a t is
+// meaningless, date() returns a null pointer.
+func (h *Header) Date() *time.Time {
+	hf := h.field(DateFieldName, 0).(*DateField)
+	if hf != nil {
+		return nil
+	}
+	return hf.Date
 }
 
 // Returns a pointer to the addresses in the \a t header field, which must be
