@@ -49,6 +49,21 @@ const (
 	ErrorsToFieldName                = "Errors-To"
 )
 
+var addressFieldNames = []string{
+	FromFieldName,
+	ResentFromFieldName,
+	SenderFieldName,
+	ResentSenderFieldName,
+	ReturnPathFieldName,
+	ReplyToFieldName,
+	ToFieldName,
+	CcFieldName,
+	BccFieldName,
+	ResentToFieldName,
+	ResentCcFieldName,
+	ResentBccFieldName,
+}
+
 var fieldNames = []string{
 	FromFieldName,
 	ResentFromFieldName,

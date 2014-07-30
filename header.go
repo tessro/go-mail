@@ -291,6 +291,164 @@ func (h *Header) Verify() {
 	// we graciously ignore all the Resent-This-Or-That restrictions.
 }
 
+func sameAddresses(a, b *AddressField) bool {
+	if a == nil || b == nil {
+		return false
+	}
+
+	l := a.Addresses
+	m := b.Addresses
+
+	if l == nil || m == nil {
+		return false
+	}
+
+	if len(l) != len(m) {
+		return false
+	}
+
+	lmap := make(map[string]bool)
+	for _, a := range l {
+		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		lmap[n] = true
+	}
+
+	mmap := make(map[string]bool)
+	for _, a := range l {
+		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		mmap[n] = true
+	}
+
+	for _, a := range l {
+		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		if !mmap[n] {
+			return false
+		}
+	}
+
+	for _, a := range m {
+		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		if !lmap[n] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Removes any redundant header fields from this header, and simplifies the
+// value of some.
+//
+// For example, if 'sender' or 'reply-to' points to the same address as 'from',
+// that field can be removed, and if 'from' contains the same address twice,
+// one can be removed.
+func (h *Header) Simplify() {
+	if !h.Valid() {
+		return
+	}
+
+	for _, fn := range addressFieldNames {
+		af := h.addressField(fn, 0)
+		if af != nil {
+			af.Addresses.Uniquify()
+		}
+	}
+
+	cde := h.field(ContentDescriptionFieldName, 0)
+	if cde != nil && cde.rfc822(false) == "" {
+		h.Fields.RemoveAllNamed(ContentDescriptionFieldName)
+		cde = nil
+	}
+
+	cte := h.ContentTransferEncoding()
+	if cte != nil && cte.Encoding == BinaryEncoding {
+		h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
+	}
+
+	cdi := h.ContentDisposition()
+	if cdi != nil {
+		ct := h.ContentType()
+		if h.mode == Rfc5322Header && (ct == nil || ct.Type == "text") &&
+			cdi.Disposition == "inline" &&
+			len(cdi.Parameters) == 0 {
+			h.Fields.RemoveAllNamed(ContentDispositionFieldName)
+			cdi = nil
+		}
+	}
+
+	ct := h.ContentType()
+	if ct != nil {
+		if len(ct.Parameters) == 0 && cte == nil && cdi == nil && cde == nil &&
+			h.DefaultType == TextPlainContentType &&
+			ct.Type == "text" && ct.Subtype == "plain" {
+			h.Fields.RemoveAllNamed(ContentTypeFieldName)
+			ct = nil
+		}
+	} else if h.DefaultType == MessageRfc822ContentType {
+		h.Add(NewHeaderField("Content-Type", "message/rfc822"))
+		ct = h.ContentType()
+	}
+
+	if h.mode == MimeHeader {
+		h.Fields.RemoveAllNamed(MimeVersionFieldName)
+	} else if ct == nil && cte == nil && cde == nil && cdi == nil &&
+		h.field(ContentLocationFieldName, 0) == nil &&
+		h.field(ContentBaseFieldName, 0) == nil {
+		h.Fields.RemoveAllNamed(MimeVersionFieldName)
+	} else {
+		if h.mode == Rfc5322Header && h.field(MimeVersionFieldName, 0) == nil {
+			h.Add(NewHeaderField("Mime-Version", "1.0"))
+		}
+	}
+	if ct != nil &&
+		(ct.Type == "multipart" || ct.Type == "message" ||
+			ct.Type == "image" || ct.Type == "audio" ||
+			ct.Type == "video") {
+		ct.removeParameter("charset")
+	}
+
+	if h.field(ErrorsToFieldName, 0) != nil {
+		et := ascii(h.field(ErrorsToFieldName, 0).Value())
+		rp := h.addresses(ReturnPathFieldName)
+		if rp != nil && len(rp) == 1 &&
+			strings.ToLower(rp[0].lpdomain()) == strings.ToLower(et) {
+			h.Fields.RemoveAllNamed(ErrorsToFieldName)
+		}
+	}
+
+	m := h.field(MessageIdFieldName, 0)
+	if m != nil && m.rfc822(false) == "" {
+		h.Fields.RemoveAllNamed(MessageIdFieldName)
+	}
+
+	if sameAddresses(h.addressField(FromFieldName, 0), h.addressField(ReplyToFieldName, 0)) {
+		h.Fields.RemoveAllNamed(ReplyToFieldName)
+	}
+
+	if sameAddresses(h.addressField(FromFieldName, 0), h.addressField(SenderFieldName, 0)) {
+		h.Fields.RemoveAllNamed(SenderFieldName)
+	}
+
+	if len(h.addresses(SenderFieldName)) == 0 {
+		h.Fields.RemoveAllNamed(SenderFieldName)
+	}
+	if len(h.addresses(ReturnPathFieldName)) == 0 {
+		h.Fields.RemoveAllNamed(ReturnPathFieldName)
+	}
+	if len(h.addresses(ToFieldName)) == 0 {
+		h.Fields.RemoveAllNamed(ToFieldName)
+	}
+	if len(h.addresses(CcFieldName)) == 0 {
+		h.Fields.RemoveAllNamed(CcFieldName)
+	}
+	if len(h.addresses(BccFieldName)) == 0 {
+		h.Fields.RemoveAllNamed(BccFieldName)
+	}
+	if len(h.addresses(ReplyToFieldName)) == 0 {
+		h.Fields.RemoveAllNamed(ReplyToFieldName)
+	}
+}
+
 // Repairs problems that can be repaired without knowing the associated
 // bodypart.
 func (h *Header) Repair() {
