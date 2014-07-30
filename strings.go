@@ -475,7 +475,7 @@ func deQP(s string, underscore bool) string {
 				j += 2
 			} else if i+2 < len(s) {
 				// ... and one common case: a two-digit hex number, not EOL
-				n, e := strconv.ParseInt(s[i+1:i+1+2], 16, 8)
+				n, e := strconv.ParseUint(s[i+1:i+1+2], 16, 8)
 				err = e
 				c = byte(n)
 			}
