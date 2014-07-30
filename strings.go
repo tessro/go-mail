@@ -927,6 +927,58 @@ func isBoring(s string, b BoringType) bool {
 	return true
 }
 
+// Returns a copy of this string where every linefeed is CRLF, and where the
+// last two characters are CRLF.
+func crlf(s string) string {
+	useCopy := true
+	if len(s) < 2 || s[len(s)-1] != 10 || s[len(s)-2] != 13 {
+		useCopy = false
+	}
+	i := 0
+	for useCopy && i < len(s) {
+		if s[i] == 13 && i < len(s) && s[i+1] == 10 {
+			i += 2
+		} else if s[i] == 13 || s[i] == 10 {
+			useCopy = false
+		} else {
+			i++
+		}
+	}
+	if useCopy {
+		return s
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, len(s)))
+	buf.WriteString(s[:i])
+	lf := false
+	for i < len(s) {
+		lf = false
+		c := s[i]
+		i++
+
+		if c == 10 {
+			lf = true
+		} else if c == 13 {
+			lf = true
+			if i < len(s) && s[i] == 10 {
+				i++
+			} else if i < len(s)-1 && s[i] == 13 && s[i+1] == 10 {
+				i += 2
+			}
+		}
+
+		if lf {
+			buf.WriteString("\r\n")
+		} else {
+			buf.WriteByte(c)
+		}
+	}
+	if !lf {
+		buf.WriteString("\r\n")
+	}
+	return buf.String()
+}
+
 // Returns true if this string contains at least one instance of \a s, and the
 // characters before and after the occurence aren't letters.
 func containsWord(s, w string) bool {
