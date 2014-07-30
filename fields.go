@@ -287,7 +287,7 @@ func (f *HeaderField) parseContentLocation(s string) {
 			p.Step(1)
 			hex[1] = p.NextChar()
 			p.Step(1)
-			i, err := strconv.ParseInt(string(hex), 16, 8)
+			i, err := strconv.ParseUint(string(hex), 16, 8)
 			if err != nil {
 				ok = false
 			}
