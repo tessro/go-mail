@@ -843,6 +843,18 @@ func (f *MimeField) addParameter(n, v string) {
 	}
 }
 
+// Removes the parameter named \a n (without regard to case), or does nothing
+// if there is no such parameter.
+func (f *MimeField) removeParameter(n string) {
+	s := strings.ToLower(n)
+	for i, p := range f.Parameters {
+		if p.Name == s {
+			f.Parameters = append(f.Parameters[:i], f.Parameters[i+1:]...)
+			break
+		}
+	}
+}
+
 // Parses \a p, which is expected to refer to a string whose next characters
 // form the RFC 2045 production '*(";"parameter)'.
 func (f *MimeField) parseParameters(p *Parser) {
