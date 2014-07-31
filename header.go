@@ -118,7 +118,21 @@ func (h *Header) Valid() bool {
 }
 
 func (h *Header) Add(f Field) {
+	if f.Name() == ToFieldName || f.Name() == CcFieldName ||
+		f.Name() == BccFieldName || f.Name() == ReplyToFieldName ||
+		f.Name() == FromFieldName {
+		first := h.addressField(f.Name(), 0)
+		next := f.(*AddressField)
+		if first != nil {
+			for _, a := range next.Addresses {
+				first.Addresses = append(first.Addresses, a)
+			}
+			return
+		}
+	}
+	// TODO: aox implementation allows insertion at specified position
 	h.Fields = append(h.Fields, f)
+	h.verified = false
 }
 
 func (h *Header) field(fn string, n int) Field {
