@@ -472,6 +472,33 @@ func (p *AddressParser) findBorder(left, right int) int {
 	return left
 }
 
+// Asserts that addresses() should return a list of a single regular
+// fully-qualified address. error() will return an error message if that isn't
+// the case.
+func (p *AddressParser) assertSingleAddress() {
+	normal := 0
+	for _, a := range p.addresses {
+		if a.t == NormalAddressType {
+			normal++
+			if normal > 1 {
+				a.err = fmt.Errorf("This is address no. %d of 1 allowed", normal)
+			}
+		} else {
+			a.err = fmt.Errorf("Expected normal email address (whatever@example.com), got %s", a.toString(false))
+		}
+	}
+
+	for _, a := range p.addresses {
+		if a.err != nil {
+			p.setError(a.err.Error(), 0)
+		}
+	}
+
+	if len(p.addresses) == 0 {
+		p.setError("No address supplied", 0)
+	}
+}
+
 // This private helper adds the address with \a name, \a localpart and \a
 // domain to the list, unless it's there already.
 //

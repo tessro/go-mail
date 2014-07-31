@@ -118,6 +118,7 @@ type Field interface {
 
 	Parse(value string)
 	Valid() bool
+	UnparsedValue() string
 	SetUnparsedValue(value string)
 
 	rfc822(avoidUtf8 bool) string
@@ -150,7 +151,7 @@ func (fs *Fields) RemoveAllNamed(name string) {
 
 type HeaderField struct {
 	name, value   string
-	UnparsedValue string
+	unparsedValue string
 	err           error
 }
 
@@ -407,8 +408,12 @@ func (f *HeaderField) Valid() bool {
 	return f.err == nil
 }
 
+func (f *HeaderField) UnparsedValue() string {
+	return f.unparsedValue
+}
+
 func (f *HeaderField) SetUnparsedValue(value string) {
-	f.UnparsedValue = value
+	f.unparsedValue = value
 }
 
 type AddressField struct {

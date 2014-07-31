@@ -414,7 +414,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 					hf, ok := f.(*HeaderField)
 					if ok {
 						// is it right to bang only Subject?
-						hf.value, decodeErr = decode(hf.UnparsedValue, c.Name)
+						hf.value, decodeErr = decode(hf.UnparsedValue(), c.Name)
 					}
 				}
 			}

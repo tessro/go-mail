@@ -27,6 +27,7 @@ func (m *Message) Parse(rfc5322 string) error {
 	}
 	m.Header = h
 	h.Repair()
+	h.RepairWithBody(&m.Part, rfc5322[i:])
 
 	ct := h.ContentType()
 	if ct != nil && ct.Type == "multipart" {
