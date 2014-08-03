@@ -37,6 +37,7 @@ func (m *Message) Parse(rfc5322 string) error {
 		m.Parts = append(m.Parts, bp)
 	}
 
+	//m.fix8BitHeaderFields()
 	m.Header.Simplify()
 
 	return nil

@@ -388,11 +388,11 @@ func (f *HeaderField) parseContentBase(s string) {
 func (f *HeaderField) parseErrorsTo(s string) {
 	ap := NewAddressParser(s)
 
-	if ap.firstError != nil || len(ap.addresses) != 1 {
+	if ap.firstError != nil || len(ap.Addresses) != 1 {
 		return
 	}
 
-	a := ap.addresses[0]
+	a := ap.Addresses[0]
 	if a.t != NormalAddressType {
 		return
 	}
@@ -615,7 +615,7 @@ func (f *AddressField) Parse(s string) {
 func (f *AddressField) parseAddressList(s string) {
 	ap := NewAddressParser(s)
 	f.err = ap.firstError
-	f.Addresses = ap.addresses
+	f.Addresses = ap.Addresses
 }
 
 // Parses the RFC 2822 mailbox-list production from \a s and records the first
@@ -650,7 +650,7 @@ func (f *AddressField) parseMailbox(s string) {
 // Overlooks common problems and records the first serious problems found.
 func (f *AddressField) parseReferences(s string) {
 	ap := references(s)
-	f.Addresses = ap.addresses
+	f.Addresses = ap.Addresses
 	f.err = ap.firstError
 }
 
@@ -661,8 +661,8 @@ func (f *AddressField) parseMessageId(s string) {
 
 	if ap.firstError != nil {
 		f.err = ap.firstError
-	} else if len(ap.addresses) == 1 {
-		f.Addresses = ap.addresses
+	} else if len(ap.Addresses) == 1 {
+		f.Addresses = ap.Addresses
 	} else {
 		f.err = errors.New("Need exactly one")
 	}
@@ -672,20 +672,20 @@ func (f *AddressField) parseMessageId(s string) {
 func (f *AddressField) parseContentId(s string) {
 	ap := NewAddressParser(s)
 	f.err = ap.firstError
-	if len(ap.addresses) != 1 {
+	if len(ap.Addresses) != 1 {
 		f.err = errors.New("Need exactly one")
 		return
 	}
 
-	switch ap.addresses[0].t {
+	switch ap.Addresses[0].t {
 	case NormalAddressType:
-		f.Addresses = ap.addresses
+		f.Addresses = ap.Addresses
 	case BounceAddressType:
 		f.err = errors.New("<> is not legal, it has to be <some@thing>")
 	case EmptyGroupAddressType:
 		f.err = errors.New("Error parsing Content-Id")
 	case LocalAddressType:
-		f.Addresses = ap.addresses
+		f.Addresses = ap.Addresses
 	case InvalidAddressType:
 		f.err = errors.New("Error parsing Content-Id")
 	}

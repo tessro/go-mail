@@ -20,26 +20,26 @@ const (
 type Address struct {
 	id        int
 	name      string
-	localpart string
-	domain    string
+	Localpart string
+	Domain    string
 	t         AddressType
 	err       error
 }
 
-func NewAddress(name, localpart, domain string) Address {
+func NewAddress(name, Localpart, Domain string) Address {
 	addr := Address{
 		name:      name,
-		localpart: localpart,
-		domain:    domain,
+		Localpart: Localpart,
+		Domain:    Domain,
 		t:         InvalidAddressType,
 	}
-	if domain != "" {
+	if Domain != "" {
 		addr.t = NormalAddressType
-	} else if localpart != "" {
+	} else if Localpart != "" {
 		addr.t = LocalAddressType
 	} else if name != "" {
 		addr.t = EmptyGroupAddressType
-	} else if name == "" && localpart == "" && domain == "" {
+	} else if name == "" && Localpart == "" && Domain == "" {
 		addr.t = BounceAddressType
 	}
 	return addr
@@ -49,7 +49,7 @@ func NewAddress(name, localpart, domain string) Address {
 // display-part, or in case of memberless groups, the display-name of the
 // group.
 //
-// A memberless group is stored as an Address whose localpart() and domain()
+// A memberless group is stored as an Address whose Localpart() and Domain()
 // are both empty.
 func (a *Address) Name(avoidUtf8 bool) string {
 	atom := true
@@ -94,19 +94,19 @@ func (a *Address) Name(avoidUtf8 bool) string {
 	return encodePhrase(a.name)
 }
 
-// Returns the localpart and domain as a EString. Returns toString() if the
+// Returns the Localpart and Domain as a EString. Returns toString() if the
 // type() isn't Normal or Local.
 func (a *Address) lpdomain() string {
 	var r string
 	if a.t == NormalAddressType || a.t == LocalAddressType {
 		if a.localpartIsSensible() {
-			r = a.localpart
+			r = a.Localpart
 		} else {
-			r = quote(a.localpart, '"', '\'')
+			r = quote(a.Localpart, '"', '\'')
 		}
 	}
 	if a.t == NormalAddressType {
-		r += "@" + a.domain
+		r += "@" + a.Domain
 	}
 	if r == "" {
 		r = a.toString(false)
@@ -130,9 +130,9 @@ func (a *Address) toString(avoidUtf8 bool) string {
 		if avoidUtf8 && a.needsUnicode() {
 			r = "this-address@needs-unicode.invalid"
 		} else if a.localpartIsSensible() {
-			r = a.localpart
+			r = a.Localpart
 		} else {
-			r = quote(a.localpart, '"', '\'')
+			r = quote(a.Localpart, '"', '\'')
 		}
 	case NormalAddressType:
 		if avoidUtf8 && a.needsUnicode() {
@@ -146,12 +146,12 @@ func (a *Address) toString(avoidUtf8 bool) string {
 				postfix = ">"
 			}
 			if a.localpartIsSensible() {
-				buf.WriteString(a.localpart)
+				buf.WriteString(a.Localpart)
 			} else {
-				buf.WriteString(quote(a.localpart, '"', '\''))
+				buf.WriteString(quote(a.Localpart, '"', '\''))
 			}
 			buf.WriteByte('@')
-			buf.WriteString(a.domain)
+			buf.WriteString(a.Domain)
 			buf.WriteString(postfix)
 			r = buf.String()
 		}
@@ -159,18 +159,18 @@ func (a *Address) toString(avoidUtf8 bool) string {
 	return r
 }
 
-// Returns true if this is a sensible-looking localpart, and false if it needs
+// Returns true if this is a sensible-looking Localpart, and false if it needs
 // quoting. We should never permit one of our users to need quoting, but we
 // must permit foreign addresses that do.
 func (a *Address) localpartIsSensible() bool {
-	if a.localpart == "" {
+	if a.Localpart == "" {
 		return false
 	}
 	i := 0
-	for i < len(a.localpart) {
-		c := a.localpart[i]
+	for i < len(a.Localpart) {
+		c := a.Localpart[i]
 		if c == '.' {
-			if a.localpart[i+1] == '.' {
+			if a.Localpart[i+1] == '.' {
 				return false
 			}
 		} else if !((c >= 'a' && c <= 'z') ||
@@ -198,7 +198,7 @@ func (a *Address) localpartIsSensible() bool {
 //
 // Note that the display-name can require unicode even if the address does not.
 func (a *Address) needsUnicode() bool {
-	if isAscii(a.localpart) && isAscii(a.domain) {
+	if isAscii(a.Localpart) && isAscii(a.Domain) {
 		return false
 	}
 	return true
@@ -228,7 +228,7 @@ type AddressParser struct {
 	s           string
 	firstError  error
 	recentError error
-	addresses   Addresses
+	Addresses   Addresses
 	lastComment string
 }
 
@@ -242,20 +242,20 @@ group           =       display-name ":" [mailbox-list / CFWS] ";"
 display-name    =       phrase
 mailbox-list    =       (mailbox *("," mailbox)) / obs-mbox-list
 address-list    =       (address *("," address)) / obs-addr-list
-addr-spec       =       local-part "@" domain
+addr-spec       =       local-part "@" Domain
 local-part      =       dot-atom / quoted-string / obs-local-part
-domain          =       dot-atom / domain-literal / obs-domain
-domain-literal  =       [CFWS] "[" *([FWS] dcontent) [FWS] "]" [CFWS]
+Domain          =       dot-atom / Domain-literal / obs-Domain
+Domain-literal  =       [CFWS] "[" *([FWS] dcontent) [FWS] "]" [CFWS]
 dcontent        =       dtext / quoted-pair
 dtext           =       NO-WS-CTL /     ; Non white space controls
                         %d33-90 /       ; The rest of the US-ASCII
                         %d94-126        ;  characters not including "[",
                                         ;  "]", or "\"
 obs-angle-addr  =       [CFWS] "<" [obs-route] addr-spec ">" [CFWS]
-obs-route       =       [CFWS] obs-domain-list ":" [CFWS]
-obs-domain-list =       "@" domain *(*(CFWS / "," ) [CFWS] "@" domain)
+obs-route       =       [CFWS] obs-Domain-list ":" [CFWS]
+obs-Domain-list =       "@" Domain *(*(CFWS / "," ) [CFWS] "@" Domain)
 obs-local-part  =       word *("." word)
-obs-domain      =       atom *("." atom)
+obs-Domain      =       atom *("." atom)
 obs-mbox-list   =       1*([mailbox] [CFWS] "," [CFWS]) [mailbox]
 obs-addr-list   =       1*([address] [CFWS] "," [CFWS]) [address]
 */
@@ -277,14 +277,14 @@ func NewAddressParser(s string) AddressParser {
 			i = p.space(i)
 		}
 	}
-	p.addresses.Uniquify()
+	p.Addresses.Uniquify()
 	if i < 0 && p.firstError == nil {
 		return p
 	}
 
 	// Plan B: Look for '@' signs and scan for addresses around
 	// them. Use what's there.
-	p.addresses = nil
+	p.Addresses = nil
 	leftBorder := 0
 	atsign := strings.IndexByte(s, '@')
 	for atsign >= 0 {
@@ -328,15 +328,15 @@ func NewAddressParser(s string) AddressParser {
 		dom := simplify(s[atsign+1 : end])
 		if lp != "" && dom != "" {
 			addr := NewAddress("", lp, dom)
-			p.addresses = append(p.addresses, addr)
+			p.Addresses = append(p.Addresses, addr)
 		}
 		atsign = nextAtsign
 		leftBorder = rightBorder
 	}
-	if len(p.addresses) > 0 {
+	if len(p.Addresses) > 0 {
 		p.firstError = nil
 		p.recentError = nil
-		p.addresses.Uniquify()
+		p.Addresses.Uniquify()
 		return p
 	}
 
@@ -364,7 +364,7 @@ func NewAddressParser(s string) AddressParser {
 			p.firstError = nil
 			p.recentError = nil
 			addr := NewAddress(n, "", "") // FIXME: should this be buf.String() instead of n?
-			p.addresses = []Address{addr}
+			p.Addresses = []Address{addr}
 		}
 	}
 	return p
@@ -415,7 +415,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 		return b
 	}
 
-	// try to scan for end of the presumed right-hand-side domain
+	// try to scan for end of the presumed right-hand-side Domain
 	b = left
 	dot := b
 	for b <= right {
@@ -428,7 +428,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 			any = true
 			b++
 		}
-		// did we see a domain component at all?
+		// did we see a Domain component at all?
 		if !any {
 			if b > left && p.s[b-1] == '.' {
 				return b - 1 // no, but we just saw a dot, make that the border
@@ -436,13 +436,13 @@ func (p *AddressParser) findBorder(left, right int) int {
 			return b // no, and no dot, so put the border here
 		}
 		if b <= right {
-			// if we don't see a dot here, the domain cannot go on
+			// if we don't see a dot here, the Domain cannot go on
 			if p.s[b] != '.' {
 				return b
 			}
 			dot = b
 			b++
-			// see if the next domain component is a top-level domain
+			// see if the next Domain component is a top-level Domain
 			for _, tld := range tlds {
 				l := len(tld)
 				if b+l <= right {
@@ -458,7 +458,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 			}
 		}
 	}
-	// the entire area is legal in a domain, but we have to draw the
+	// the entire area is legal in a Domain, but we have to draw the
 	// line somewhere, so if we've seen one or more dots in the
 	// middle, we use the rightmost dot.
 	if dot > left && dot < right {
@@ -477,7 +477,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 // the case.
 func (p *AddressParser) assertSingleAddress() {
 	normal := 0
-	for _, a := range p.addresses {
+	for _, a := range p.Addresses {
 		if a.t == NormalAddressType {
 			normal++
 			if normal > 1 {
@@ -488,25 +488,25 @@ func (p *AddressParser) assertSingleAddress() {
 		}
 	}
 
-	for _, a := range p.addresses {
+	for _, a := range p.Addresses {
 		if a.err != nil {
 			p.setError(a.err.Error(), 0)
 		}
 	}
 
-	if len(p.addresses) == 0 {
+	if len(p.Addresses) == 0 {
 		p.setError("No address supplied", 0)
 	}
 }
 
-// This private helper adds the address with \a name, \a localpart and \a
-// domain to the list, unless it's there already.
+// This private helper adds the address with \a name, \a Localpart and \a
+// Domain to the list, unless it's there already.
 //
 // \a name is adjusted heuristically.
-func (p *AddressParser) add(name, localpart, domain string) {
-	// if the localpart is too long, reject the add()
-	if len(localpart) > 256 {
-		p.recentError = fmt.Errorf("Localpart too long (%d characters, RFC 2821's maximum is 64): %s@%s", len(localpart), localpart, domain)
+func (p *AddressParser) add(name, Localpart, Domain string) {
+	// if the Localpart is too long, reject the add()
+	if len(Localpart) > 256 {
+		p.recentError = fmt.Errorf("Localpart too long (%d characters, RFC 2821's maximum is 64): %s@%s", len(Localpart), Localpart, Domain)
 		if p.firstError == nil {
 			p.firstError = p.recentError
 		}
@@ -534,15 +534,15 @@ func (p *AddressParser) add(name, localpart, domain string) {
 	// anti-outlook, step 2: if the name is the same as the address,
 	// just kill it.
 	an := strings.ToTitle(name)
-	if an == strings.ToTitle(localpart) ||
-		(len(an) == len(localpart)+1+len(domain) &&
-			an == strings.ToTitle(localpart)+"@"+strings.ToTitle(domain)) {
+	if an == strings.ToTitle(Localpart) ||
+		(len(an) == len(Localpart)+1+len(Domain) &&
+			an == strings.ToTitle(Localpart)+"@"+strings.ToTitle(Domain)) {
 		name = ""
 	}
 
-	a := NewAddress(name, localpart, domain)
+	a := NewAddress(name, Localpart, Domain)
 	a.err = p.recentError
-	p.addresses = append(p.addresses, a)
+	p.Addresses = append(p.Addresses, a)
 }
 
 // This private function parses an address ending at position \a i and adds it
@@ -645,7 +645,7 @@ func (p *AddressParser) address(i int) int {
 						} else if n[j] == ' ' || n[j] == '_' || n[j] == '-' {
 							buf.WriteByte('-')
 						} else {
-							p.setError("localpart contains parenthesis", i)
+							p.setError("Localpart contains parenthesis", i)
 						}
 						j++
 					}
@@ -682,7 +682,7 @@ func (p *AddressParser) address(i int) int {
 			n, i = p.phrase(i)
 			for i >= 0 && (s[i] == '@' || s[i] == '<') {
 				// we're looking at an unencoded 8-bit name, or at
-				// 'lp@domain<lp@domain>', or at 'x<y<z@domain>'. we
+				// 'lp@Domain<lp@Domain>', or at 'x<y<z@Domain>'. we
 				// react to that by ignoring the display-name.
 				i--
 				_, i = p.phrase(i)
@@ -720,11 +720,11 @@ func (p *AddressParser) address(i int) int {
 				_, i = p.atom(i) // discard the "supplied" display-name
 				p.add("", lp, dom)
 			} else {
-				p.setError("Expected '<' while in =?...?...<localpart@domain>?=", i)
+				p.setError("Expected '<' while in =?...?...<Localpart@Domain>?=", i)
 				return i
 			}
 		} else {
-			p.setError("Expected '@' while in =?...?...<localpart@domain>?=", i)
+			p.setError("Expected '@' while in =?...?...<Localpart@Domain>?=", i)
 			return i
 		}
 	} else if s[i] == ';' && strings.Contains(s[:i], ":") {
@@ -784,7 +784,7 @@ func (p *AddressParser) address(i int) int {
 			if err != nil { // FIXME: should really check well-formedness instead
 				name = ""
 			}
-			name = "" // do it anyway: we don't want name <localpart>
+			name = "" // do it anyway: we don't want name <Localpart>
 		}
 		var lp string
 		lp, i = p.atom(i)
@@ -823,7 +823,7 @@ func (p *AddressParser) address(i int) int {
 	} else if isQuoted(s, '"', '\'') && strings.Contains(s, "@") {
 		wrapped := NewAddressParser(unquote(s, '"', '\''))
 		if wrapped.firstError == nil {
-			p.addresses = append(p.addresses, wrapped.addresses...)
+			p.Addresses = append(p.Addresses, wrapped.Addresses...)
 			i = -1
 		} else {
 			p.setError("Unexpected quote character", i)
@@ -876,7 +876,7 @@ func (p *AddressParser) address(i int) int {
 					} else if n[j] == ' ' || n[j] == '_' || n[j] == '-' {
 						buf.WriteByte('-')
 					} else {
-						p.setError("localpart contains parenthesis", i)
+						p.setError("Localpart contains parenthesis", i)
 					}
 					j++
 				}
@@ -989,14 +989,14 @@ func unqp(s string) string {
 	return buf.String()
 }
 
-// This private function picks up a domain ending at \a i and returns it as a
-// string. The validity of the domain is not checked (and should not be - it
+// This private function picks up a Domain ending at \a i and returns it as a
+// string. The validity of the Domain is not checked (and should not be - it
 // may come from an old mail message) only its syntactical validity.
 func (p *AddressParser) domain(i int) (string, int) {
 	i = p.comment(i)
 
-	//domain         = dot-atom / domain-literal / obs-domain
-	//domain-literal = [CFWS] "[" *([FWS] dcontent) [FWS] "]" [CFWS]
+	//Domain         = dot-atom / Domain-literal / obs-Domain
+	//Domain-literal = [CFWS] "[" *([FWS] dcontent) [FWS] "]" [CFWS]
 	//dcontent       = dtext / quoted-pair
 	//dtext          = NO-WS-CTL /     ; Non white space controls
 	//                 %d33-90 /       ; The rest of the US-ASCII
@@ -1035,7 +1035,7 @@ func (p *AddressParser) domain(i int) (string, int) {
 			// because of quoted-pair.
 			dom = unqp(p.s[i+1 : j])
 		} else {
-			p.setError("literal domain missing [", i)
+			p.setError("literal Domain missing [", i)
 		}
 	} else {
 		// atoms, separated by '.' and (obsoletely) spaces. the spaces
@@ -1050,7 +1050,7 @@ func (p *AddressParser) domain(i int) (string, int) {
 				dom = a + "." + dom
 			}
 		}
-		// FIXME: does this properly handle zero-length domains?
+		// FIXME: does this properly handle zero-length Domains?
 	}
 
 	return dom, i
@@ -1203,7 +1203,7 @@ func (p *AddressParser) phrase(i int) (string, int) {
 	return simplify(r), i
 }
 
-// This private function parses the localpart ending at \a i, and returns it as
+// This private function parses the Localpart ending at \a i, and returns it as
 // a string.
 func (p *AddressParser) localpart(i int) (string, int) {
 	r := ""
@@ -1236,7 +1236,7 @@ func (p *AddressParser) localpart(i int) (string, int) {
 		}
 	}
 	if atomOnly && r == "" {
-		p.setError("Empty localpart", i)
+		p.setError("Empty Localpart", i)
 	}
 	return r, i
 }
@@ -1292,7 +1292,7 @@ func (p *AddressParser) setError(s string, i int) {
 // Removes any addresses that exist twice in the list.
 func (as *Addresses) Uniquify() {
 	key := func(a Address) string {
-		return fmt.Sprintf("%s@%s", strings.ToTitle(a.localpart), strings.ToTitle(a.domain))
+		return fmt.Sprintf("%s@%s", strings.ToTitle(a.Localpart), strings.ToTitle(a.Domain))
 	}
 
 	if len(*as) == 0 {

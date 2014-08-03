@@ -344,25 +344,25 @@ func sameAddresses(a, b *AddressField) bool {
 
 	lmap := make(map[string]bool)
 	for _, a := range l {
-		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		n := fmt.Sprintf("%s@%s", a.Localpart, strings.ToTitle(a.Domain))
 		lmap[n] = true
 	}
 
 	mmap := make(map[string]bool)
 	for _, a := range l {
-		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		n := fmt.Sprintf("%s@%s", a.Localpart, strings.ToTitle(a.Domain))
 		mmap[n] = true
 	}
 
 	for _, a := range l {
-		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		n := fmt.Sprintf("%s@%s", a.Localpart, strings.ToTitle(a.Domain))
 		if !mmap[n] {
 			return false
 		}
 	}
 
 	for _, a := range m {
-		n := fmt.Sprintf("%s@%s", a.localpart, strings.ToTitle(a.domain))
+		n := fmt.Sprintf("%s@%s", a.Localpart, strings.ToTitle(a.Domain))
 		if !lmap[n] {
 			return false
 		}
@@ -814,7 +814,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 					ap := NewAddressParser(section(f.rfc822(false), " ", 1))
 					ap.assertSingleAddress()
 					if ap.firstError == nil {
-						a = ap.addresses
+						a = ap.Addresses
 					}
 					break
 				}
@@ -839,7 +839,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 				ap := NewAddressParser(section(f.rfc822(false), " ", 1))
 				ap.assertSingleAddress()
 				if ap.firstError == nil {
-					a = ap.addresses
+					a = ap.Addresses
 				}
 			}
 			if len(a) > 0 {
@@ -1248,9 +1248,9 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 	if len(h.addresses(SenderFieldName)) > 1 {
 		sender := h.addressField(SenderFieldName, 0)
-		domain := strings.ToTitle(sender.Addresses[0].domain)
+		domain := strings.ToTitle(sender.Addresses[0].Domain)
 		i := 0
-		for i < len(sender.Addresses) && strings.ToTitle(sender.Addresses[i].domain) == domain {
+		for i < len(sender.Addresses) && strings.ToTitle(sender.Addresses[i].Domain) == domain {
 			i++
 		}
 		if i == len(sender.Addresses)-1 {
@@ -1303,8 +1303,8 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 						domain == "rfc822" &&
 						address == nil && value != "" {
 						ap := NewAddressParser(value)
-						for _, a := range ap.addresses {
-							if a.err == nil && a.domain != "" {
+						for _, a := range ap.Addresses {
+							if a.err == nil && a.Domain != "" {
 								address = &a
 								break
 							}
@@ -1314,7 +1314,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 				if reportingMta != "" && address != nil {
 					name, _ := decode(reportingMta, "us-ascii")
 					name += " postmaster"
-					postmaster := NewAddress(name, "postmaster", strings.ToLower(address.domain))
+					postmaster := NewAddress(name, "postmaster", strings.ToLower(address.Domain))
 					from := h.addressField(FromFieldName, 0)
 					if from != nil {
 						from.err = nil
@@ -1351,7 +1351,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 				me := strings.ToLower(Hostname)
 				victim := ""
 				if msgid != nil {
-					victim = strings.ToLower(msgid.domain)
+					victim = strings.ToLower(msgid.Domain)
 				}
 				tld := len(victim)
 				if victim[tld-3] == '.' {
@@ -1376,7 +1376,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 				if victim != "" &&
 					victim != me && !strings.HasSuffix(me, "."+victim) &&
 					tld < len(victim) {
-					replacement := NewAddress("postmaster (on behalf of unnamed "+msgid.domain+" user)", "postmaster", victim)
+					replacement := NewAddress("postmaster (on behalf of unnamed "+msgid.Domain+" user)", "postmaster", victim)
 					from.Addresses = []Address{replacement}
 					from.err = nil
 				}
