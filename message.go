@@ -26,6 +26,7 @@ func (m *Message) Parse(rfc5322 string) error {
 		return err
 	}
 	m.Header = h
+	m.Rfc822Size = len(rfc5322)
 	h.Repair()
 	h.RepairWithBody(&m.Part, rfc5322[i:])
 
@@ -56,7 +57,7 @@ func (m *Message) Rfc822(avoidUtf8 bool) string {
 		buf = bytes.NewBuffer(make([]byte, 0, 50000))
 	}
 
-	buf.WriteString(m.Header.asText(avoidUtf8))
+	buf.WriteString(m.Header.AsText(avoidUtf8))
 	buf.WriteString(CRLF)
 	buf.WriteString(m.Body(avoidUtf8))
 

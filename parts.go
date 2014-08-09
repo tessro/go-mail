@@ -35,7 +35,7 @@ func (p *Part) appendMultipart(buf *bytes.Buffer, avoidUtf8 bool) {
 	for _, c := range p.Parts {
 		buf.WriteString(CRLF)
 
-		buf.WriteString(c.Header.asText(avoidUtf8))
+		buf.WriteString(c.Header.AsText(avoidUtf8))
 		buf.WriteString(CRLF)
 		p.appendAnyPart(buf, c, ct, avoidUtf8)
 

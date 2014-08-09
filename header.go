@@ -1554,7 +1554,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 // Returns the canonical text representation of this Header.  Downgrades rather
 // than including UTF-8 if \a avoidUtf8 is true.
-func (h *Header) asText(avoidUtf8 bool) string {
+func (h *Header) AsText(avoidUtf8 bool) string {
 	buf := bytes.NewBuffer(make([]byte, 0, len(h.Fields)*100))
 
 	for _, f := range h.Fields {
