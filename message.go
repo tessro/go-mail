@@ -109,11 +109,11 @@ func (m *Message) BodyPart(s string, create bool) *Part {
 		i := 0
 		var c *Part
 		for i, c = range cs {
-			if c.number >= n {
+			if c.Number >= n {
 				break
 			}
 		}
-		if c != nil && c.number == n {
+		if c != nil && c.Number == n {
 			if n == 1 && c.Header == nil {
 				// it's possible that i doesn't have a header of its
 				// own, and that the parent message's header functions
@@ -132,12 +132,12 @@ func (m *Message) BodyPart(s string, create bool) *Part {
 			var child *Part
 			if bp != nil {
 				child = &Part{
-					number: n,
+					Number: n,
 					parent: bp,
 				}
 			} else {
 				child = &Part{
-					number: n,
+					Number: n,
 					parent: &m.Part,
 				}
 			}

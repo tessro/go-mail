@@ -11,10 +11,10 @@ import (
 type Part struct {
 	message *Message
 	parent  *Part
-	number  int
 
 	Header *Header
 	Parts  []*Part
+	Number int
 
 	HasText bool
 	Text    string
@@ -157,7 +157,7 @@ func (p *Part) parseMultipart(rfc5322, divider string, digest bool) {
 					}
 
 					bp := p.parseBodypart(rfc5322[start:i], h)
-					bp.number = pn
+					bp.Number = pn
 					p.Parts = append(p.Parts, bp)
 					pn++
 
