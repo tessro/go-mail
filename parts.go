@@ -100,6 +100,43 @@ func (p *Part) appendTextPart(buf *bytes.Buffer, bp *Part, ct *ContentType) {
 	buf.WriteString(encodeCTE(body, e, 72))
 }
 
+// Returns the text representation of this Bodypart.
+//
+// Notes: This function seems uncomfortable. It returns just one of many
+// possible text representations, and the exact choice seems arbitrary, and
+// finally, it does rather overlap with text() and data().
+//
+// We probably should transition away from this function.
+//
+// The exact representation returned uses base64 encoding for data types and no
+// ContentTransferEncoding. For text types, it encodes the text according to
+// the ContentType.
+func (p *Part) AsText(avoidUtf8 bool) string {
+	r := ""
+	var c *charset.Charset
+
+	ct := p.Header.ContentType()
+	if ct != nil && ct.parameter("charset") != "" {
+		c = charset.Info(ct.parameter("charset"))
+	}
+	if c == nil {
+		c = charset.Info("us-ascii")
+	}
+
+	if len(p.Parts) > 0 {
+		buf := bytes.NewBuffer(make([]byte, 0))
+		p.appendMultipart(buf, avoidUtf8)
+		r = buf.String()
+	} else if p.Header.ContentType() == nil ||
+		p.Header.ContentType().Type == "text" {
+		r, _ = decode(p.Text, c.Name)
+	} else {
+		r = e64(p.Data, 72)
+	}
+
+	return r
+}
+
 // Parses the part of \a rfc2822 from index \a i to (but not including) \a end,
 // dividing the part into bodyparts wherever the boundary \a divider occurs and
 // adding each bodypart to \a children, and setting the correct \a parent. \a
