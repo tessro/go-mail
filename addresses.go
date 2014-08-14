@@ -546,7 +546,9 @@ func (p *AddressParser) add(name, Localpart, Domain string) {
 
 	a := NewAddress(name, Localpart, Domain)
 	a.err = p.recentError
-	p.Addresses = append(p.Addresses, a)
+
+	// Prepend, since addresses are detected in reverse
+	p.Addresses = append([]Address{a}, p.Addresses...)
 }
 
 // This private function parses an address ending at position \a i and adds it
