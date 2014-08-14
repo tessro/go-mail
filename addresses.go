@@ -49,7 +49,7 @@ func NewAddress(name, localpart, domain string) Address {
 // display-part, or in case of memberless groups, the display-name of the
 // group.
 //
-// A memberless group is stored as an Address whose Localpart() and Domain()
+// A memberless group is stored as an Address whose localpart() and domain()
 // are both empty.
 func (a *Address) Name(avoidUtf8 bool) string {
 	atom := true
@@ -94,7 +94,7 @@ func (a *Address) Name(avoidUtf8 bool) string {
 	return encodePhrase(a.name)
 }
 
-// Returns the Localpart and Domain as a EString. Returns toString() if the
+// Returns the localpart and domain as a EString. Returns toString() if the
 // type() isn't Normal or Local.
 func (a *Address) lpdomain() string {
 	var r string
@@ -163,7 +163,7 @@ func (a *Address) toString(avoidUtf8 bool) string {
 	return r
 }
 
-// Returns true if this is a sensible-looking Localpart, and false if it needs
+// Returns true if this is a sensible-looking localpart, and false if it needs
 // quoting. We should never permit one of our users to need quoting, but we
 // must permit foreign addresses that do.
 func (a *Address) localpartIsSensible() bool {
@@ -419,7 +419,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 		return b
 	}
 
-	// try to scan for end of the presumed right-hand-side Domain
+	// try to scan for end of the presumed right-hand-side domain
 	b = left
 	dot := b
 	for b <= right {
@@ -432,7 +432,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 			any = true
 			b++
 		}
-		// did we see a Domain component at all?
+		// did we see a domain component at all?
 		if !any {
 			if b > left && p.s[b-1] == '.' {
 				return b - 1 // no, but we just saw a dot, make that the border
@@ -440,13 +440,13 @@ func (p *AddressParser) findBorder(left, right int) int {
 			return b // no, and no dot, so put the border here
 		}
 		if b <= right {
-			// if we don't see a dot here, the Domain cannot go on
+			// if we don't see a dot here, the domain cannot go on
 			if p.s[b] != '.' {
 				return b
 			}
 			dot = b
 			b++
-			// see if the next Domain component is a top-level Domain
+			// see if the next domain component is a top-level domain
 			for _, tld := range tlds {
 				l := len(tld)
 				if b+l <= right {
@@ -462,7 +462,7 @@ func (p *AddressParser) findBorder(left, right int) int {
 			}
 		}
 	}
-	// the entire area is legal in a Domain, but we have to draw the
+	// the entire area is legal in a domain, but we have to draw the
 	// line somewhere, so if we've seen one or more dots in the
 	// middle, we use the rightmost dot.
 	if dot > left && dot < right {
@@ -503,12 +503,12 @@ func (p *AddressParser) assertSingleAddress() {
 	}
 }
 
-// This private helper adds the address with \a name, \a Localpart and \a
-// Domain to the list, unless it's there already.
+// This private helper adds the address with \a name, \a localpart and \a
+// domain to the list, unless it's there already.
 //
 // \a name is adjusted heuristically.
 func (p *AddressParser) add(name, Localpart, Domain string) {
-	// if the Localpart is too long, reject the add()
+	// if the localpart is too long, reject the add()
 	if len(Localpart) > 256 {
 		p.recentError = fmt.Errorf("Localpart too long (%d characters, RFC 2821's maximum is 64): %s@%s", len(Localpart), Localpart, Domain)
 		if p.firstError == nil {
@@ -688,7 +688,7 @@ func (p *AddressParser) address(i int) int {
 			n, i = p.phrase(i)
 			for i >= 0 && (s[i] == '@' || s[i] == '<') {
 				// we're looking at an unencoded 8-bit name, or at
-				// 'lp@Domain<lp@Domain>', or at 'x<y<z@Domain>'. we
+				// 'lp@domain<lp@domain>', or at 'x<y<z@domain>'. we
 				// react to that by ignoring the display-name.
 				i--
 				_, i = p.phrase(i)
@@ -790,7 +790,7 @@ func (p *AddressParser) address(i int) int {
 			if err != nil { // FIXME: should really check well-formedness instead
 				name = ""
 			}
-			name = "" // do it anyway: we don't want name <Localpart>
+			name = "" // do it anyway: we don't want name <localpart>
 		}
 		var lp string
 		lp, i = p.atom(i)
@@ -995,14 +995,14 @@ func unqp(s string) string {
 	return buf.String()
 }
 
-// This private function picks up a Domain ending at \a i and returns it as a
-// string. The validity of the Domain is not checked (and should not be - it
+// This private function picks up a domain ending at \a i and returns it as a
+// string. The validity of the domain is not checked (and should not be - it
 // may come from an old mail message) only its syntactical validity.
 func (p *AddressParser) domain(i int) (string, int) {
 	i = p.comment(i)
 
-	//Domain         = dot-atom / Domain-literal / obs-Domain
-	//Domain-literal = [CFWS] "[" *([FWS] dcontent) [FWS] "]" [CFWS]
+	//domain         = dot-atom / domain-literal / obs-domain
+	//domain-literal = [CFWS] "[" *([FWS] dcontent) [FWS] "]" [CFWS]
 	//dcontent       = dtext / quoted-pair
 	//dtext          = NO-WS-CTL /     ; Non white space controls
 	//                 %d33-90 /       ; The rest of the US-ASCII
@@ -1056,7 +1056,7 @@ func (p *AddressParser) domain(i int) (string, int) {
 				dom = a + "." + dom
 			}
 		}
-		// FIXME: does this properly handle zero-length Domains?
+		// FIXME: does this properly handle zero-length domains?
 	}
 
 	return dom, i
@@ -1209,7 +1209,7 @@ func (p *AddressParser) phrase(i int) (string, int) {
 	return simplify(r), i
 }
 
-// This private function parses the Localpart ending at \a i, and returns it as
+// This private function parses the localpart ending at \a i, and returns it as
 // a string.
 func (p *AddressParser) localpart(i int) (string, int) {
 	r := ""
