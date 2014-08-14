@@ -72,7 +72,7 @@ func TestAddressFields(t *testing.T) {
 
 	from := msg.Header.Addresses("From")
 	if len(from) != 3 {
-		t.Errorf("incorrect number of From addresses: expected 2, got %d", len(from))
+		t.Errorf("incorrect number of From addresses: expected 3, got %d", len(from))
 	} else if from[0].String() != "basic.from@example.com" {
 		t.Errorf("incorrect From address: expected basic.from@example.com, got %s", from[1].String())
 	} else if from[1].String() != `Full From <full.from@example.com>` {
