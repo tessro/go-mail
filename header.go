@@ -177,16 +177,12 @@ func (h *Header) Date() *time.Time {
 // Returns a pointer to the addresses in the \a t header field, which must be
 // an address field such as From or Bcc. If not, or if the field is empty,
 // addresses() returns a null pointer.
-func (h *Header) addresses(fn string) []Address {
-	as := []Address{}
+func (h *Header) Addresses(fn string) []Address {
 	af := h.addressField(fn, 0)
-	if af != nil {
-		as = af.Addresses
+	if af == nil {
+		return nil
 	}
-	if len(as) == 0 {
-		as = nil
-	}
-	return as
+	return af.Addresses
 }
 
 // Returns a pointer to the Content-Type header field, or a null pointer if
@@ -444,7 +440,7 @@ func (h *Header) Simplify() {
 
 	if h.field(ErrorsToFieldName, 0) != nil {
 		et := ascii(h.field(ErrorsToFieldName, 0).Value())
-		rp := h.addresses(ReturnPathFieldName)
+		rp := h.Addresses(ReturnPathFieldName)
 		if rp != nil && len(rp) == 1 &&
 			strings.ToLower(rp[0].lpdomain()) == strings.ToLower(et) {
 			h.Fields.RemoveAllNamed(ErrorsToFieldName)
@@ -464,22 +460,22 @@ func (h *Header) Simplify() {
 		h.Fields.RemoveAllNamed(SenderFieldName)
 	}
 
-	if len(h.addresses(SenderFieldName)) == 0 {
+	if len(h.Addresses(SenderFieldName)) == 0 {
 		h.Fields.RemoveAllNamed(SenderFieldName)
 	}
-	if len(h.addresses(ReturnPathFieldName)) == 0 {
+	if len(h.Addresses(ReturnPathFieldName)) == 0 {
 		h.Fields.RemoveAllNamed(ReturnPathFieldName)
 	}
-	if len(h.addresses(ToFieldName)) == 0 {
+	if len(h.Addresses(ToFieldName)) == 0 {
 		h.Fields.RemoveAllNamed(ToFieldName)
 	}
-	if len(h.addresses(CcFieldName)) == 0 {
+	if len(h.Addresses(CcFieldName)) == 0 {
 		h.Fields.RemoveAllNamed(CcFieldName)
 	}
-	if len(h.addresses(BccFieldName)) == 0 {
+	if len(h.Addresses(BccFieldName)) == 0 {
 		h.Fields.RemoveAllNamed(BccFieldName)
 	}
-	if len(h.addresses(ReplyToFieldName)) == 0 {
+	if len(h.Addresses(ReplyToFieldName)) == 0 {
 		h.Fields.RemoveAllNamed(ReplyToFieldName)
 	}
 }
@@ -636,16 +632,16 @@ func (h *Header) Repair() {
 	// contains more than one address. If it's a copy, or even an
 	// illegal subset, we drop it.
 
-	senders := h.addresses(SenderFieldName)
+	senders := h.Addresses(SenderFieldName)
 
 	if occurrences[SenderFieldName] > 0 && len(senders) != 1 {
 		from := make(map[string]bool)
-		for _, a := range h.addresses(FromFieldName) {
+		for _, a := range h.Addresses(FromFieldName) {
 			from[strings.ToLower(a.lpdomain())] = true
 		}
 
 		sender := []string{}
-		for _, a := range h.addresses(FromFieldName) {
+		for _, a := range h.Addresses(FromFieldName) {
 			sender = append(sender, strings.ToLower(a.lpdomain()))
 		}
 
@@ -785,13 +781,13 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		a := []Address{}
 		for (head != nil || parent != nil) && len(a) == 0 {
 			if head != nil {
-				a = head.addresses(FromFieldName)
+				a = h.Addresses(FromFieldName)
 			}
 			if head != nil && (len(a) == 0 || a[0].t != NormalAddressType) {
-				a = head.addresses(ReturnPathFieldName)
+				a = h.Addresses(ReturnPathFieldName)
 			}
 			if head != nil && (len(a) == 0 || a[0].t != NormalAddressType) {
-				a = head.addresses(SenderFieldName)
+				a = h.Addresses(SenderFieldName)
 			}
 			if head != nil && (len(a) == 0 || a[0].t != NormalAddressType) {
 				a = []Address{}
@@ -831,7 +827,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	if h.mode == Rfc5322Header &&
 		(h.field(FromFieldName, 0) == nil ||
 			!h.field(FromFieldName, 0).Valid() &&
-				len(h.addresses(FromFieldName)) == 0) {
+				len(h.Addresses(FromFieldName)) == 0) {
 		a := []Address{}
 		for _, f := range h.Fields {
 			if f.Name() == "Return-Receipt-To" ||
@@ -1246,7 +1242,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// domain, and the last has a different domain, drop the first
 	// ones. There are also other possible algorithms.
 
-	if len(h.addresses(SenderFieldName)) > 1 {
+	if len(h.Addresses(SenderFieldName)) > 1 {
 		sender := h.addressField(SenderFieldName, 0)
 		domain := strings.ToTitle(sender.Addresses[0].Domain)
 		i := 0
@@ -1342,7 +1338,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			l := from.Addresses
 			if len(l) == 1 && l[0].t == BounceAddressType {
 				var msgid *Address
-				al := h.addresses(MessageIdFieldName)
+				al := h.Addresses(MessageIdFieldName)
 				if len(al) > 0 {
 					msgid = &al[0]
 				}
@@ -1390,7 +1386,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	if h.mode == Rfc5322Header &&
 		(h.field(FromFieldName, 0) == nil ||
 			(!h.field(FromFieldName, 0).Valid() &&
-				h.addresses(FromFieldName) == nil) ||
+				h.Addresses(FromFieldName) == nil) ||
 			h.field(FromFieldName, 0).Error() != nil &&
 				strings.Contains(h.field(FromFieldName, 0).Error().Error(), "No-bounce")) {
 		from := h.addressField(FromFieldName, 0)
