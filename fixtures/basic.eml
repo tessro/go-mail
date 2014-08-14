@@ -1,6 +1,7 @@
 From: basic.from@example.com, "Full From" <full.from@example.com> (with a long
     comment)
-From: "broken from" broken.from@example.com
+From: "broken from" broken.from@example.com; second.broken@example.com
+  (semicolon is invalid) third.broken@example.com (no separator)
 To: recipient@example.com
 Subject: Basic Email
 Content-Type: text/plain

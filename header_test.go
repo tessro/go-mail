@@ -71,14 +71,18 @@ func TestAddressFields(t *testing.T) {
 	}
 
 	from := msg.Header.Addresses("From")
-	if len(from) != 3 {
-		t.Errorf("incorrect number of From addresses: expected 3, got %d", len(from))
+	if len(from) != 5 {
+		t.Errorf("incorrect number of From addresses: expected 5, got %d", len(from))
 	} else if from[0].String() != "basic.from@example.com" {
 		t.Errorf("incorrect From address: expected basic.from@example.com, got %s", from[1].String())
 	} else if from[1].String() != `Full From <full.from@example.com>` {
 		t.Errorf("incorrect From address: expected \"Full From <full.from@example.com>\", got %s", from[1].String())
 	} else if from[2].String() != "broken.from@example.com" {
 		t.Errorf("incorrect From address: expected broken.from@example.com, got %s", from[2].String())
+	} else if from[3].String() != "second.broken@example.com" {
+		t.Errorf("incorrect From address: expected second.broken@example.com, got %s", from[3].String())
+	} else if from[4].String() != "third.broken@example.com" {
+		t.Errorf("incorrect From address: expected third.broken@example.com, got %s", from[4].String())
 	}
 
 	to := msg.Header.Addresses("To")
