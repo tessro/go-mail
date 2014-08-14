@@ -48,7 +48,7 @@ func loadFixture(t *testing.T, name string) *mail.Message {
 // Skipf(format string, args ...interface{})
 // Skipped() bool
 
-func TestHeader(t *testing.T) {
+func TestContentType(t *testing.T) {
 	msg := loadFixture(t, "basic")
 
 	if msg.Header == nil {
@@ -60,6 +60,14 @@ func TestHeader(t *testing.T) {
 		t.Error("missing Content-Type")
 	} else if ct.Type != "text" || ct.Subtype != "plain" {
 		t.Errorf("incorrect Content-Type: expected text/plain, got %s/%s", ct.Type, ct.Subtype)
+	}
+}
+
+func TestAddressFields(t *testing.T) {
+	msg := loadFixture(t, "basic")
+
+	if msg.Header == nil {
+		t.Fatal("missing Header struct")
 	}
 
 	from := msg.Header.Addresses("From")
