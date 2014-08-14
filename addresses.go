@@ -26,20 +26,20 @@ type Address struct {
 	err       error
 }
 
-func NewAddress(name, Localpart, Domain string) Address {
+func NewAddress(name, localpart, domain string) Address {
 	addr := Address{
 		name:      name,
-		Localpart: Localpart,
-		Domain:    Domain,
+		Localpart: localpart,
+		Domain:    domain,
 		t:         InvalidAddressType,
 	}
-	if Domain != "" {
+	if domain != "" {
 		addr.t = NormalAddressType
-	} else if Localpart != "" {
+	} else if localpart != "" {
 		addr.t = LocalAddressType
 	} else if name != "" {
 		addr.t = EmptyGroupAddressType
-	} else if name == "" && Localpart == "" && Domain == "" {
+	} else if name == "" && localpart == "" && domain == "" {
 		addr.t = BounceAddressType
 	}
 	return addr
