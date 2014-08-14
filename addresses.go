@@ -114,6 +114,10 @@ func (a *Address) lpdomain() string {
 	return r
 }
 
+func (a *Address) String() string {
+	return a.toString(false)
+}
+
 // Returns an RFC 2822 representation of this address. If \a avoidUtf8 is
 // present and true (the default is false), toString() returns an address which
 // avoids UTF-8 at all costs, even if that loses information.
