@@ -305,10 +305,10 @@ func NewAddressParser(s string) AddressParser {
 			leftBorder++
 		}
 		end := atsign + 1
-		for end <= rightBorder && s[end] == ' ' {
+		for end < rightBorder && s[end] == ' ' {
 			end++
 		}
-		for end <= rightBorder &&
+		for end < rightBorder &&
 			((s[end] >= 'a' && s[end] <= 'z') ||
 				(s[end] >= 'A' && s[end] <= 'Z') ||
 				(s[end] >= '0' && s[end] <= '9') ||
@@ -317,10 +317,10 @@ func NewAddressParser(s string) AddressParser {
 			end++
 		}
 		start := atsign
-		for start >= leftBorder && s[start-1] == ' ' {
+		for start > leftBorder && s[start-1] == ' ' {
 			start--
 		}
-		for start <= leftBorder &&
+		for start > leftBorder &&
 			((s[start-1] >= 'a' && s[start-1] <= 'z') ||
 				(s[start-1] >= 'A' && s[start-1] <= 'Z') ||
 				(s[start-1] >= '0' && s[start-1] <= '9') ||
@@ -563,12 +563,12 @@ func (p *AddressParser) address(i int) int {
 		i--
 		i = p.comment(i)
 	}
-	for i > 0 && s[i] == '>' && s[i-1] == '>' {
+	for i > 1 && s[i] == '>' && s[i-1] == '>' {
 		i--
 	}
 	if i < 0 {
 		// nothing there. error of some sort.
-	} else if i > 1 && s[i-1] == '<' && s[i] == '>' {
+	} else if i > 0 && s[i-1] == '<' && s[i] == '>' {
 		// the address is <>. whether that's legal is another matter.
 		p.add("", "", "")
 		i -= 2
@@ -1191,7 +1191,7 @@ func (p *AddressParser) phrase(i int) (string, int) {
 		}
 		if r == "" {
 			r = word
-		} else if word[len(word)-1] == ' ' {
+		} else if len(word) > 0 && word[len(word)-1] == ' ' {
 			r = word + r
 		} else if word != "" {
 			if !enc || !encw ||
