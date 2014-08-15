@@ -34,6 +34,12 @@ func loadFixture(t *testing.T, name string) *mail.Message {
 	return msg
 }
 
+func testStringEquals(t *testing.T, field, expected, actual string) {
+	if actual != expected {
+		t.Errorf("incorrect %s:\nexpected %q,\ngot %q", field, expected, actual)
+	}
+}
+
 // Error(args ...interface{})
 // Errorf(format string, args ...interface{})
 // Fail()
@@ -117,5 +123,14 @@ func TestCFWS(t *testing.T) {
 		t.Errorf("incorrect number of From addresses: expected 1, got %d", len(from))
 	} else if from[0].String() != "Pete <pete@silly.test>" {
 		t.Errorf("incorrect From address: expected \"Pete <pete@silly.test>\", got %s", from[0].String())
+	}
+
+	to := msg.Header.Addresses("To")
+	if len(to) != 3 {
+		t.Errorf("incorrect number of To addresses: expected 3, got %d", len(to))
+	} else {
+		testStringEquals(t, "To address", to[0].String(), "Chris Jones <c@public.example>")
+		testStringEquals(t, "To address", to[1].String(), "joe@example.org")
+		testStringEquals(t, "To address", to[2].String(), "John <jdoe@one.test>")
 	}
 }
