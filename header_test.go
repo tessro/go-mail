@@ -36,7 +36,7 @@ func loadFixture(t *testing.T, name string) *mail.Message {
 
 func testStringEquals(t *testing.T, field, expected, actual string) {
 	if actual != expected {
-		t.Errorf("incorrect %s:\nexpected %q,\ngot %q", field, expected, actual)
+		t.Errorf("incorrect %s:\nexpected %q,\n     got %q", field, expected, actual)
 	}
 }
 
