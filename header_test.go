@@ -98,3 +98,18 @@ func TestAddressFields(t *testing.T) {
 		t.Errorf("incorrect number of Cc addresses: expected 0, got %d", len(to))
 	}
 }
+
+func TestCFWS(t *testing.T) {
+	msg := loadFixture(t, "cfws")
+
+	if msg.Header == nil {
+		t.Fatal("missing Header struct")
+	}
+
+	from := msg.Header.Addresses("From")
+	if len(from) != 1 {
+		t.Errorf("incorrect number of From addresses: expected 1, got %d", len(from))
+	} else if from[0].String() != "Pete <pete@silly.test>" {
+		t.Errorf("incorrect From address: expected \"Pete <pete@silly.test>\", got %s", from[0].String())
+	}
+}
