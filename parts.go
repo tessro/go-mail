@@ -285,42 +285,44 @@ func guessHtmlCodec(body string) *charset.Charset {
 
 	b := simplify(strings.ToLower(body))
 	i := 0
-	for i >= 0 {
+	for {
 		tag := "<meta http-equiv=\"content-type\" content=\""
 		next := strings.Index(b[i:], tag)
-		if next >= 0 {
-			i += next
-			i = i + len(tag)
-			j := i
-			for j < len(b) && b[j] != '"' {
-				j++
-			}
-			hf := NewHeaderField("Content-Type", b[i:j])
-			cs := hf.(*ContentType).parameter("charset")
-			var meta *charset.Charset
-			if cs != "" {
-				meta = charset.Info(cs)
-			}
-			m := ""
-			g := ""
-			var merr, gerr error
-			if meta != nil {
-				m, merr = decode(body, meta.Name)
-			}
-			if guess != nil {
-				g, gerr = decode(body, guess.Name)
-			}
-			ub, _ := decode(b, meta.Name)
-			if meta != nil &&
-				((m != "" && m == g) ||
-					(merr == nil &&
-						(guess == nil || gerr != nil)) ||
-					(merr == nil && guess == nil) ||
-					(merr == nil && guess != nil && guess.Name == "iso-8859-1") ||
-					(merr == nil && guess != nil && gerr != nil)) &&
-				strings.Contains(ascii(ub), tag) {
-				guess = meta
-			}
+		if next < 0 {
+			break
+		}
+
+		i += next
+		i += len(tag)
+		j := i
+		for j < len(b) && b[j] != '"' {
+			j++
+		}
+		hf := NewHeaderField("Content-Type", b[i:j])
+		cs := hf.(*ContentType).parameter("charset")
+		var meta *charset.Charset
+		if cs != "" {
+			meta = charset.Info(cs)
+		}
+		m := ""
+		g := ""
+		var merr, gerr error
+		if meta != nil {
+			m, merr = decode(body, meta.Name)
+		}
+		if guess != nil {
+			g, gerr = decode(body, guess.Name)
+		}
+		ub, _ := decode(b, meta.Name)
+		if meta != nil &&
+			((m != "" && m == g) ||
+				(merr == nil &&
+					(guess == nil || gerr != nil)) ||
+				(merr == nil && guess == nil) ||
+				(merr == nil && guess != nil && guess.Name == "iso-8859-1") ||
+				(merr == nil && guess != nil && gerr != nil)) &&
+			strings.Contains(ascii(ub), tag) {
+			guess = meta
 		}
 	}
 
