@@ -4,6 +4,6 @@ From: "broken from" broken.from@example.com; second.broken@example.com
   (semicolon is invalid) third.broken@example.com (no separator)
 To: recipient@example.com
 Subject: Basic Email
-Content-Type: text/plain
+Content-Type: text/html
 
-This is a basic text email.
+This is a basic <b>HTML</b> email.

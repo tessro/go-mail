@@ -58,8 +58,8 @@ func TestContentType(t *testing.T) {
 	ct := msg.Header.ContentType()
 	if ct == nil {
 		t.Error("missing Content-Type")
-	} else if ct.Type != "text" || ct.Subtype != "plain" {
-		t.Errorf("incorrect Content-Type: expected text/plain, got %s/%s", ct.Type, ct.Subtype)
+	} else if ct.Type != "text" || ct.Subtype != "html" {
+		t.Errorf("incorrect Content-Type: expected text/html, got %s/%s", ct.Type, ct.Subtype)
 	}
 }
 
