@@ -80,28 +80,18 @@ func TestAddressFields(t *testing.T) {
 	if len(from) != 5 {
 		t.Errorf("incorrect number of From addresses: expected 5, got %d", len(from))
 	} else {
-		if from[0].String() != "basic.from@example.com" {
-			t.Errorf("incorrect From address: expected basic.from@example.com, got %s", from[1].String())
-		}
-		if from[1].String() != `Full From <full.from@example.com>` {
-			t.Errorf("incorrect From address: expected \"Full From <full.from@example.com>\", got %s", from[1].String())
-		}
-		if from[2].String() != "broken.from@example.com" {
-			t.Errorf("incorrect From address: expected broken.from@example.com, got %s", from[2].String())
-		}
-		if from[3].String() != "second.broken@example.com" {
-			t.Errorf("incorrect From address: expected second.broken@example.com, got %s", from[3].String())
-		}
-		if from[4].String() != "third.broken@example.com" {
-			t.Errorf("incorrect From address: expected third.broken@example.com, got %s", from[4].String())
-		}
+		testStringEquals(t, "From address", from[0].String(), "basic.from@example.com")
+		testStringEquals(t, "From address", from[1].String(), "Full From <full.from@example.com>")
+		testStringEquals(t, "From address", from[2].String(), "broken.from@example.com")
+		testStringEquals(t, "From address", from[3].String(), "second.broken@example.com")
+		testStringEquals(t, "From address", from[4].String(), "third.broken@example.com")
 	}
 
 	to := msg.Header.Addresses("To")
 	if len(to) != 1 {
 		t.Errorf("incorrect number of To addresses: expected 1, got %d", len(to))
-	} else if to[0].String() != "recipient@example.com" {
-		t.Errorf("incorrect To address: expected recipient@example.com, got %s", to[0].String())
+	} else {
+		testStringEquals(t, "To address", to[0].String(), "recipient@example.com")
 	}
 
 	// Test requests for missing address headers
