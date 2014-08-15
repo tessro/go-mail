@@ -20,21 +20,20 @@ func ReadMessage(rfc5322 string) (*Message, error) {
 }
 
 func (m *Message) Parse(rfc5322 string) error {
-	i := 0
-	h, err := ReadHeader(rfc5322[i:], Rfc5322Header)
+	h, err := ReadHeader(rfc5322, Rfc5322Header)
 	if err != nil {
 		return err
 	}
 	m.Header = h
 	m.Rfc822Size = len(rfc5322)
 	h.Repair()
-	h.RepairWithBody(&m.Part, rfc5322[i:])
+	h.RepairWithBody(&m.Part, rfc5322[h.numBytes:])
 
 	ct := h.ContentType()
 	if ct != nil && ct.Type == "multipart" {
 		m.parseMultipart(rfc5322, ct.parameter("boundary"), ct.Subtype == "digest")
 	} else {
-		bp := m.parseBodypart(rfc5322, h)
+		bp := m.parseBodypart(rfc5322[h.numBytes:], h)
 		m.Parts = append(m.Parts, bp)
 	}
 
