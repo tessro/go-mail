@@ -17,8 +17,8 @@ const (
 type DefaultContentType int
 
 const (
-	MessageRfc822ContentType DefaultContentType = iota
-	TextPlainContentType
+	TextPlainContentType DefaultContentType = iota // default
+	MessageRfc822ContentType
 )
 
 type Header struct {
