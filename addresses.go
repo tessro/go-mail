@@ -538,9 +538,8 @@ func (p *AddressParser) add(name, localpart, domain string) {
 	// anti-outlook, step 2: if the name is the same as the address,
 	// just kill it.
 	an := strings.ToTitle(name)
-	if an == strings.ToTitle(localpart) ||
-		(len(an) == len(localpart)+1+len(domain) &&
-			an == strings.ToTitle(localpart)+"@"+strings.ToTitle(domain)) {
+	if len(an) == len(localpart)+1+len(domain) &&
+		an == strings.ToTitle(localpart)+"@"+strings.ToTitle(domain) {
 		name = ""
 	}
 
