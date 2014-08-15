@@ -507,10 +507,10 @@ func (p *AddressParser) assertSingleAddress() {
 // domain to the list, unless it's there already.
 //
 // \a name is adjusted heuristically.
-func (p *AddressParser) add(name, Localpart, Domain string) {
+func (p *AddressParser) add(name, localpart, domain string) {
 	// if the localpart is too long, reject the add()
-	if len(Localpart) > 256 {
-		p.recentError = fmt.Errorf("Localpart too long (%d characters, RFC 2821's maximum is 64): %s@%s", len(Localpart), Localpart, Domain)
+	if len(localpart) > 256 {
+		p.recentError = fmt.Errorf("localpart too long (%d characters, RFC 2821's maximum is 64): %s@%s", len(localpart), localpart, domain)
 		if p.firstError == nil {
 			p.firstError = p.recentError
 		}
@@ -538,13 +538,13 @@ func (p *AddressParser) add(name, Localpart, Domain string) {
 	// anti-outlook, step 2: if the name is the same as the address,
 	// just kill it.
 	an := strings.ToTitle(name)
-	if an == strings.ToTitle(Localpart) ||
-		(len(an) == len(Localpart)+1+len(Domain) &&
-			an == strings.ToTitle(Localpart)+"@"+strings.ToTitle(Domain)) {
+	if an == strings.ToTitle(localpart) ||
+		(len(an) == len(localpart)+1+len(domain) &&
+			an == strings.ToTitle(localpart)+"@"+strings.ToTitle(domain)) {
 		name = ""
 	}
 
-	a := NewAddress(name, Localpart, Domain)
+	a := NewAddress(name, localpart, domain)
 	a.err = p.recentError
 
 	// Prepend, since addresses are detected in reverse
