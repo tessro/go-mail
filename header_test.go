@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"io/ioutil"
 
@@ -123,4 +124,19 @@ func TestCFWS(t *testing.T) {
 		testStringEquals(t, "To address", to[1].String(), "joe@example.org")
 		testStringEquals(t, "To address", to[2].String(), "John <jdoe@one.test>")
 	}
+
+	cc := msg.Header.Addresses("Cc")
+	if len(cc) != 0 {
+		t.Errorf("incorrect number of Cc addresses: expected 0, got %d", len(cc))
+	}
+
+	date := msg.Header.Date()
+	if date == nil {
+		t.Errorf("missing or invalid date field in header")
+	} else {
+		testStringEquals(t, "Date", date.Format(time.RFC822), "13 Feb 69 23:32 -0330")
+	}
+
+	messageId := msg.Header.MessageId()
+	testStringEquals(t, "Message-ID", messageId, "<testabcd.1234@silly.test>")
 }
