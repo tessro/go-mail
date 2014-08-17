@@ -168,7 +168,7 @@ func (h *Header) addressField(fn string, n int) *AddressField {
 // meaningless, date() returns a null pointer.
 func (h *Header) Date() *time.Time {
 	hf := h.field(DateFieldName, 0).(*DateField)
-	if hf != nil {
+	if hf == nil {
 		return nil
 	}
 	return hf.Date
