@@ -249,6 +249,18 @@ func (h *Header) ContentLanguage() *ContentLanguage {
 	return f.(*ContentLanguage)
 }
 
+// Returns the value of the Message-ID field, or an empty string if there isn't one.
+// there isn't one, or if there are multiple (which is illegal).
+func (h *Header) MessageId() string {
+	ids := h.Addresses(MessageIdFieldName)
+	if len(ids) != 1 {
+		return ""
+	}
+
+	id := ids[0]
+	return fmt.Sprintf("<%s@%s>", id.Localpart, id.Domain)
+}
+
 type HeaderFieldCondition struct {
 	name     string
 	min, max int
