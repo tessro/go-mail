@@ -796,6 +796,7 @@ func init() {
 }
 
 func parseDate(s string) *time.Time {
+	s = simplify(stripcomments(s))
 	for _, layout := range dateLayouts {
 		t, err := time.Parse(layout, s)
 		if err == nil {

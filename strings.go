@@ -140,6 +140,35 @@ func simplify(str string) string {
 	return string(result)
 }
 
+func stripcomments(s string) string {
+	out := bytes.NewBuffer(make([]byte, 0, len(s)))
+	level := 0
+	escape := false
+	for _, c := range s {
+		if escape {
+			escape = false
+			if level == 0 {
+				out.WriteRune(c)
+			}
+		} else {
+			switch c {
+			case '\\':
+				escape = true
+			case '(':
+				level++
+			case ')':
+				level--
+			default:
+				if level == 0 {
+					out.WriteRune(c)
+				}
+			}
+		}
+
+	}
+	return out.String()
+}
+
 // Returns a copy of this string where all letters have been changed to conform
 // to typical mail header practice: Letters following digits and other letters
 // are lower-cased. Other letters are upper-cased (notably including the very
