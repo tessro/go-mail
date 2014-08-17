@@ -97,7 +97,7 @@ func TestAddressFields(t *testing.T) {
 	// Test requests for missing address headers
 	cc := msg.Header.Addresses("Cc")
 	if len(cc) != 0 {
-		t.Errorf("incorrect number of Cc addresses: expected 0, got %d", len(to))
+		t.Errorf("incorrect number of Cc addresses: expected 0, got %d", len(cc))
 	}
 }
 
