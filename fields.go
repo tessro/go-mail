@@ -140,8 +140,9 @@ func (fs *Fields) Remove(r Field) {
 
 func (fs *Fields) RemoveAllNamed(name string) {
 	i := 0
+	name = strings.ToLower(name)
 	for i < len(*fs) {
-		if (*fs)[i].Name() == name {
+		if strings.ToLower((*fs)[i].Name()) == name {
 			fs.RemoveAt(i)
 		} else {
 			i++
