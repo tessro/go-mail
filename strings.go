@@ -969,7 +969,7 @@ func isBoring(s string, b BoringType) bool {
 
 // Returns a copy of this string where every linefeed is CRLF, and where the
 // last two characters are CRLF.
-func crlf(s string) string {
+func toCRLF(s string) string {
 	useCopy := true
 	if len(s) < 2 || s[len(s)-1] != 10 || s[len(s)-2] != 13 {
 		useCopy = false

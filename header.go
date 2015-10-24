@@ -1586,5 +1586,5 @@ func (h *Header) appendField(buf *bytes.Buffer, f Field, avoidUTF8 bool) {
 	buf.WriteString(f.Name())
 	buf.WriteString(": ")
 	buf.WriteString(f.rfc822(avoidUTF8))
-	buf.WriteString(CRLF)
+	buf.WriteString(crlf)
 }

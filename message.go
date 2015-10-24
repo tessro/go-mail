@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-const CRLF = "\015\012"
+const crlf = "\015\012"
 
 type Message struct {
 	*Part
@@ -57,7 +57,7 @@ func (m *Message) RFC822(avoidUTF8 bool) string {
 	}
 
 	buf.WriteString(m.Header.AsText(avoidUTF8))
-	buf.WriteString(CRLF)
+	buf.WriteString(crlf)
 	buf.WriteString(m.Body(avoidUTF8))
 
 	return buf.String()

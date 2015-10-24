@@ -33,18 +33,18 @@ func (p *Part) appendMultipart(buf *bytes.Buffer, avoidUTF8 bool) {
 	delim := ct.parameter("boundary")
 	buf.WriteString("--" + delim)
 	for _, c := range p.Parts {
-		buf.WriteString(CRLF)
+		buf.WriteString(crlf)
 
 		buf.WriteString(c.Header.AsText(avoidUTF8))
-		buf.WriteString(CRLF)
+		buf.WriteString(crlf)
 		p.appendAnyPart(buf, c, ct, avoidUTF8)
 
-		buf.WriteString(CRLF)
+		buf.WriteString(crlf)
 		buf.WriteString("--")
 		buf.WriteString(delim)
 	}
 	buf.WriteString("--")
-	buf.WriteString(CRLF)
+	buf.WriteString(crlf)
 }
 
 // This function appends the text of the MIME bodypart \a bp with Content-Type
@@ -383,7 +383,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 		if e == Base64Encoding || e == UuencodeEncoding {
 			body = decodeCTE(body, e)
 		} else {
-			body = decodeCTE(crlf(body), e)
+			body = decodeCTE(toCRLF(body), e)
 		}
 	}
 
@@ -431,7 +431,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 		}
 
 		bp.HasText = true
-		t, decodeErr := decode(crlf(body), c.Name)
+		t, decodeErr := decode(toCRLF(body), c.Name)
 		bp.Text = t
 
 		if c.Name == "GB2312" || c.Name == "ISO-2022-JP" ||
@@ -476,14 +476,14 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 			guessed := ""
 			var gerr error
 			if g != nil {
-				guessed, gerr = decode(crlf(body), g.Name)
+				guessed, gerr = decode(toCRLF(body), g.Name)
 			}
 			if g == nil {
 				// if we couldn't guess anything, keep what we had if
 				// it's valid or explicitly specified, else use
 				// unknown-8bit.
 				if !specified && decodeErr != nil {
-					bp.Text, _ = decode(crlf(body), "unknown-8bit")
+					bp.Text, _ = decode(toCRLF(body), "unknown-8bit")
 				}
 			} else {
 				// if we could guess something, is our guess better than what
