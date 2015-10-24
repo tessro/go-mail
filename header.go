@@ -113,7 +113,7 @@ func ReadHeader(rfc5322 string, m headerMode) (h *Header, err error) {
 // Returns true if this Header fills all the conditions laid out in RFC 2821
 // for validity, and false if not.
 func (h *Header) Valid() bool {
-	h.Verify()
+	h.verify()
 	return h.err == nil
 }
 
@@ -289,7 +289,7 @@ var conditions = []HeaderFieldCondition{
 
 // This private function verifies that the entire header is consistent and
 // legal, and that each contained HeaderField is legal.
-func (h *Header) Verify() {
+func (h *Header) verify() {
 	if h.verified {
 		return
 	}
