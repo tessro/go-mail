@@ -16,7 +16,7 @@ type Part struct {
 	Parts  []*Part
 	Number int
 
-	HasText bool
+	hasText bool
 	Text    string
 	Data    string
 
@@ -430,7 +430,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 			c = charset.Info("us-ascii")
 		}
 
-		bp.HasText = true
+		bp.hasText = true
 		t, decodeErr := decode(toCRLF(body), c.Name)
 		bp.Text = t
 
@@ -607,7 +607,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 		body = encodeCTE(body, cte.Encoding, 72)
 	}
 	bp.numEncodedBytes = len(body)
-	if bp.HasText || (ct.Type == "message" && ct.Subtype == "rfc822") {
+	if bp.hasText || (ct.Type == "message" && ct.Subtype == "rfc822") {
 		n := 0
 		i := 0
 		l := len(body)
