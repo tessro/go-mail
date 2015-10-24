@@ -29,7 +29,7 @@ func newParserState(other *parserState) *parserState {
 	return ps
 }
 
-type Parser struct {
+type parser struct {
 	*parserState
 	str string
 
@@ -37,9 +37,9 @@ type Parser struct {
 	lc   string
 }
 
-func NewParser(s string) *Parser {
+func newParser(s string) *parser {
 	st := newParserState(nil)
-	return &Parser{str: s, parserState: st}
+	return &parser{str: s, parserState: st}
 }
 
 // Returns true if \a c belongs to the RFC 2822 'atext' production, and false
@@ -66,7 +66,7 @@ func isAtext(c byte) bool {
 
 // Moves Pos() to the first nonwhitespace character after the current point.
 // If Pos() points to nonwhitespace already, it is not moved.
-func (p *Parser) Whitespace() string {
+func (p *parser) Whitespace() string {
 	var out bytes.Buffer
 
 	c := p.NextChar()
@@ -83,7 +83,7 @@ func (p *Parser) Whitespace() string {
 // contents of the last comment.
 //
 // Returns a null string if there was no comment.
-func (p *Parser) Comment() string {
+func (p *parser) Comment() string {
 	var buf bytes.Buffer
 	p.Whitespace()
 	for p.Present("(") {
@@ -117,7 +117,7 @@ func (p *Parser) Comment() string {
 }
 
 // Steps past an atom or a quoted-text, and returns that text.
-func (p *Parser) String() string {
+func (p *parser) String() string {
 	p.Comment()
 
 	// now, treat it either as a quoted string or an unquoted atom
@@ -153,7 +153,7 @@ func (p *Parser) String() string {
 }
 
 // Returns a dot-atom, stepping past all relevant whitespace and comments.
-func (p *Parser) DotAtom() string {
+func (p *parser) DotAtom() string {
 	result := p.Atom()
 	if result == "" {
 		return ""
@@ -182,7 +182,7 @@ func (p *Parser) DotAtom() string {
 
 // Returns a single atom, stepping past white space and comments before and
 // after it.
-func (p *Parser) Atom() string {
+func (p *parser) Atom() string {
 	p.Comment()
 	var buf bytes.Buffer
 	for !p.AtEnd() && isAtext(p.NextChar()) {
@@ -194,7 +194,7 @@ func (p *Parser) Atom() string {
 
 // Returns a single MIME token (as defined in RFC 2045 section 5), which is an
 // atom minus [/?=] plus [.].
-func (p *Parser) MimeToken() string {
+func (p *parser) MimeToken() string {
 	p.Comment()
 
 	var buf bytes.Buffer
@@ -215,7 +215,7 @@ func (p *Parser) MimeToken() string {
 
 // Returns a single MIME value (as defined in RFC 2045 section 5), which is an
 // atom minus [/?=] plus [.] (i.e., a MIME token) or a quoted string.
-func (p *Parser) MimeValue() string {
+func (p *parser) MimeValue() string {
 	p.Comment()
 	if p.NextChar() == '"' {
 		return p.String()
@@ -247,7 +247,7 @@ const (
 //
 // The characters permitted in the encoded-text are adjusted based on \a type,
 // which may be Text (by default), Comment, or Phrase.
-func (p *Parser) encodedWord(t EncodedTextType) string {
+func (p *parser) encodedWord(t EncodedTextType) string {
 	// encoded-word = "=?" charset '?' encoding '?' encoded-text "?="
 
 	m := p.mark()
@@ -372,7 +372,7 @@ func (p *Parser) encodedWord(t EncodedTextType) string {
 //
 // Leading and trailing whitespace is trimmed, internal whitespace is kept as
 // is.
-func (p *Parser) encodedWords(t EncodedTextType) string {
+func (p *parser) encodedWords(t EncodedTextType) string {
 	var out bytes.Buffer
 	end := false
 	var m int
@@ -392,7 +392,7 @@ func (p *Parser) encodedWords(t EncodedTextType) string {
 	return trim(out.String())
 }
 
-func (p *Parser) Text() string {
+func (p *parser) Text() string {
 	var out bytes.Buffer
 
 	space := p.Whitespace()
@@ -446,7 +446,7 @@ func (p *Parser) Text() string {
 
 // Steps past an RFC 822 phrase (a series of word/encoded-words) at the cursor
 // and returns its unicode representation, which may be an empty string.
-func (p *Parser) Phrase() string {
+func (p *parser) Phrase() string {
 	var buf bytes.Buffer
 	p.Comment()
 
@@ -523,14 +523,14 @@ func (p *Parser) Phrase() string {
 
 // Returns the current (0-indexed) position of the cursor in the input() string
 // without changing anything.
-func (p *Parser) Pos() int {
+func (p *parser) Pos() int {
 	return p.at
 }
 
 // Returns the next character at the cursor without changing the cursor
 // position. Returns 0 if there isn't a character available (e.g. when the
 // cursor is past the end of the input string).
-func (p *Parser) NextChar() uint8 {
+func (p *parser) NextChar() uint8 {
 	if p.at >= len(p.str) {
 		return 0
 	} else {
@@ -539,14 +539,14 @@ func (p *Parser) NextChar() uint8 {
 }
 
 // Advances the cursor past n characters of the input.
-func (p *Parser) Step(n int) {
+func (p *parser) Step(n int) {
 	p.at += n
 }
 
 // Checks whether the next characters in the input match s. If so, Present()
 // steps past the matching characters and returns true. If not, it returns
 // false without advancing the cursor. The match is case insensitive.
-func (p *Parser) Present(s string) bool {
+func (p *parser) Present(s string) bool {
 	if s == "" {
 		return true
 	}
@@ -567,7 +567,7 @@ func (p *Parser) Present(s string) bool {
 // Requires that the next characters in the input match \a s (case
 // insensitively), and steps past the matching characters. If \a s is not
 // present(), it is considered an error().
-func (p *Parser) require(s string) {
+func (p *parser) require(s string) {
 	if !p.Present(s) {
 		p.err = fmt.Errorf("Expected: %q, got: %s", s, p.following())
 	}
@@ -575,7 +575,7 @@ func (p *Parser) require(s string) {
 
 // Returns a string of no more than 15 characters containing the first unparsed
 // bits of input. Meant for use in error messages.
-func (p *Parser) following() string {
+func (p *parser) following() string {
 	if p.at >= len(p.str) {
 		return ""
 	}
@@ -587,21 +587,21 @@ func (p *Parser) following() string {
 }
 
 // Returns true if we have parsed the entire input string, and false otherwise.
-func (p *Parser) AtEnd() bool {
+func (p *parser) AtEnd() bool {
 	return p.at >= len(p.str)
 }
 
 // Saves the current cursor position and error state of the parser and returns
 // an identifier of the current mark. The companion function restore() restores
 // the last or a specified mark. The returned mark is never 0.
-func (p *Parser) mark() int {
+func (p *parser) mark() int {
 	p.parserState = newParserState(p.parserState)
 	return p.next.mark
 }
 
 // Restores the last mark()ed cursor position and error state of this parser
 // object.
-func (p *Parser) restore(m int) {
+func (p *parser) restore(m int) {
 	c := p.parserState
 	for c != nil && c.mark != m && c.next != nil {
 		c = c.next
@@ -611,6 +611,6 @@ func (p *Parser) restore(m int) {
 	}
 }
 
-func (p *Parser) Valid() bool {
+func (p *parser) Valid() bool {
 	return p.err == nil
 }

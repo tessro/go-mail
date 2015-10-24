@@ -205,7 +205,7 @@ func (f *HeaderField) parseText(s string) {
 	h := false
 
 	if !h {
-		p := NewParser(s)
+		p := newParser(s)
 		t := p.Text()
 		if p.AtEnd() {
 			f.value = trim(t)
@@ -214,7 +214,7 @@ func (f *HeaderField) parseText(s string) {
 	}
 
 	if !h {
-		p := NewParser(simplify(s))
+		p := newParser(simplify(s))
 		t := p.Text()
 		if p.AtEnd() {
 			f.value = t
@@ -226,7 +226,7 @@ func (f *HeaderField) parseText(s string) {
 		(strings.Contains(f.value, "=?") && strings.Contains(f.value, "?=")) {
 		// common: Subject: =?ISO-8859-1?q?foo bar baz?=
 		// unusual, but seen: Subject: =?ISO-8859-1?q?foo bar?= baz
-		p1 := NewParser(simplify(s))
+		p1 := newParser(simplify(s))
 		var tmp bytes.Buffer
 		inWord := false
 		for !p1.AtEnd() {
@@ -247,7 +247,7 @@ func (f *HeaderField) parseText(s string) {
 				}
 			}
 		}
-		p2 := NewParser(tmp.String())
+		p2 := newParser(tmp.String())
 		t := simplify(p2.Text())
 		if p2.AtEnd() && !strings.Contains(t, "?=") {
 			f.value = t
@@ -267,7 +267,7 @@ func (f *HeaderField) parseText(s string) {
 // numbers, we replace other version numbers with 1.0 and a comment. Bayesian
 // analysis tools will probably find the comment to be a sure spam sign.
 func (f *HeaderField) parseMimeVersion(s string) {
-	p := NewParser(s)
+	p := newParser(s)
 	p.Comment()
 	v := p.DotAtom()
 	p.Comment()
@@ -288,7 +288,7 @@ func (f *HeaderField) parseMimeVersion(s string) {
 // Parses the Content-Location header field in \a s and records the first
 // problem found.
 func (f *HeaderField) parseContentLocation(s string) {
-	p := NewParser(unquote(trim(s), '"', '\''))
+	p := newParser(unquote(trim(s), '"', '\''))
 
 	p.Whitespace()
 	e := p.Pos()
@@ -879,7 +879,7 @@ func (f *MimeField) removeParameter(n string) {
 
 // Parses \a p, which is expected to refer to a string whose next characters
 // form the RFC 2045 production '*(";"parameter)'.
-func (f *MimeField) parseParameters(p *Parser) {
+func (f *MimeField) parseParameters(p *parser) {
 	done := false
 	first := true
 	for f.Valid() && !done {
@@ -1058,7 +1058,7 @@ func NewContentType() *ContentType {
 }
 
 func (f *ContentType) Parse(s string) {
-	p := NewParser(s)
+	p := newParser(s)
 	p.Whitespace()
 	for p.Present(":") {
 		p.Whitespace()
@@ -1173,7 +1173,7 @@ func (f *ContentType) Parse(s string) {
 	if f.Valid() && !p.AtEnd() &&
 		f.Type == "multipart" && f.parameter("boundary") == "" &&
 		containsWord(strings.ToLower(s), "boundary") {
-		csp := NewParser(s[strings.Index(strings.ToLower(s), "boundary"):])
+		csp := newParser(s[strings.Index(strings.ToLower(s), "boundary"):])
 		csp.require("boundary")
 		csp.Whitespace()
 		if csp.Present("=") {
@@ -1216,7 +1216,7 @@ func NewContentTransferEncoding() *ContentTransferEncoding {
 }
 
 func (f *ContentTransferEncoding) Parse(s string) {
-	p := NewParser(s)
+	p := newParser(s)
 
 	t := strings.ToLower(p.MimeValue())
 	p.Comment()
@@ -1254,7 +1254,7 @@ func NewContentDisposition() *ContentDisposition {
 }
 
 func (f *ContentDisposition) Parse(s string) {
-	p := NewParser(s)
+	p := newParser(s)
 
 	m := p.mark()
 	t := strings.ToLower(p.MimeToken())
@@ -1291,7 +1291,7 @@ func NewContentLanguage() *ContentLanguage {
 }
 
 func (f *ContentLanguage) Parse(s string) {
-	p := NewParser(s)
+	p := newParser(s)
 	for {
 		p.Comment()
 		t := p.MimeToken()

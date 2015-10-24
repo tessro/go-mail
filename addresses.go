@@ -932,7 +932,7 @@ func (p *AddressParser) comment(i int) int {
 		if p.s[i] != '(' {
 			p.setError("Unbalanced comment: ", i)
 		} else {
-			ep := NewParser(p.s[i : j+1])
+			ep := newParser(p.s[i : j+1])
 			p.lastComment = ep.Comment()
 		}
 		if i > 0 {
@@ -1173,7 +1173,7 @@ func (p *AddressParser) phrase(i int) (string, int) {
 			if a == "" {
 				done = true
 			} else if strings.HasPrefix(a, "=?") {
-				p := NewParser(a)
+				p := newParser(a)
 				tmp := simplify(p.Phrase())
 				if strings.HasPrefix(tmp, "=?") || strings.Contains(tmp, "=?") {
 					drop = true
