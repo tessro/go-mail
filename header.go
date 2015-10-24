@@ -22,10 +22,11 @@ const (
 )
 
 type Header struct {
+	Fields
+
 	defaultType defaultContentType
 
-	mode   headerMode
-	Fields Fields
+	mode headerMode
 
 	numBytes int
 
