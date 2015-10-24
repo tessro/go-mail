@@ -194,7 +194,7 @@ func (p *parser) Atom() string {
 
 // Returns a single MIME token (as defined in RFC 2045 section 5), which is an
 // atom minus [/?=] plus [.].
-func (p *parser) MimeToken() string {
+func (p *parser) MIMEToken() string {
 	p.Comment()
 
 	var buf bytes.Buffer
@@ -215,12 +215,12 @@ func (p *parser) MimeToken() string {
 
 // Returns a single MIME value (as defined in RFC 2045 section 5), which is an
 // atom minus [/?=] plus [.] (i.e., a MIME token) or a quoted string.
-func (p *parser) MimeValue() string {
+func (p *parser) MIMEValue() string {
 	p.Comment()
 	if p.NextChar() == '"' {
 		return p.String()
 	}
-	return p.MimeToken()
+	return p.MIMEToken()
 }
 
 type EncodedTextType int

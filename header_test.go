@@ -137,6 +137,6 @@ func TestCFWS(t *testing.T) {
 		testStringEquals(t, "Date", date.Format(time.RFC822), "13 Feb 69 23:32 -0330")
 	}
 
-	messageId := msg.Header.MessageId()
-	testStringEquals(t, "Message-ID", messageId, "<testabcd.1234@silly.test>")
+	messageID := msg.Header.MessageID()
+	testStringEquals(t, "Message-ID", messageID, "<testabcd.1234@silly.test>")
 }

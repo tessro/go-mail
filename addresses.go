@@ -51,7 +51,7 @@ func NewAddress(name, localpart, domain string) Address {
 //
 // A memberless group is stored as an Address whose localpart() and domain()
 // are both empty.
-func (a *Address) Name(avoidUtf8 bool) string {
+func (a *Address) Name(avoidUTF8 bool) string {
 	atom := true
 	ascii := true
 
@@ -73,7 +73,7 @@ func (a *Address) Name(avoidUtf8 bool) string {
 			// still an atom
 		} else if c >= 128 {
 			ascii = false
-			if avoidUtf8 {
+			if avoidUTF8 {
 				atom = false
 			}
 		} else {
@@ -87,7 +87,7 @@ func (a *Address) Name(avoidUtf8 bool) string {
 		return a.name
 	}
 
-	if ascii || !avoidUtf8 {
+	if ascii || !avoidUTF8 {
 		return quote(a.name, '"', '\\')
 	}
 
@@ -118,10 +118,10 @@ func (a *Address) String() string {
 	return a.toString(false)
 }
 
-// Returns an RFC 2822 representation of this address. If \a avoidUtf8 is
+// Returns an RFC 2822 representation of this address. If \a avoidUTF8 is
 // present and true (the default is false), toString() returns an address which
 // avoids UTF-8 at all costs, even if that loses information.
-func (a *Address) toString(avoidUtf8 bool) string {
+func (a *Address) toString(avoidUTF8 bool) string {
 	var r string
 	switch a.t {
 	case InvalidAddressType:
@@ -131,7 +131,7 @@ func (a *Address) toString(avoidUtf8 bool) string {
 	case EmptyGroupAddressType:
 		r = a.Name(true) + ":;"
 	case LocalAddressType:
-		if avoidUtf8 && a.needsUnicode() {
+		if avoidUTF8 && a.needsUnicode() {
 			r = "this-address@needs-unicode.invalid"
 		} else if a.localpartIsSensible() {
 			r = a.Localpart
@@ -139,13 +139,13 @@ func (a *Address) toString(avoidUtf8 bool) string {
 			r = quote(a.Localpart, '"', '\'')
 		}
 	case NormalAddressType:
-		if avoidUtf8 && a.needsUnicode() {
+		if avoidUTF8 && a.needsUnicode() {
 			r = "this-address@needs-unicode.invalid"
 		} else {
 			postfix := ""
 			var buf bytes.Buffer
 			if a.name != "" {
-				buf.WriteString(a.Name(avoidUtf8))
+				buf.WriteString(a.Name(avoidUTF8))
 				buf.WriteString(" <")
 				postfix = ">"
 			}

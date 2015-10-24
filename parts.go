@@ -28,16 +28,16 @@ type Part struct {
 }
 
 // Appends the text of this multipart MIME entity to the buffer \a buf.
-func (p *Part) appendMultipart(buf *bytes.Buffer, avoidUtf8 bool) {
+func (p *Part) appendMultipart(buf *bytes.Buffer, avoidUTF8 bool) {
 	ct := p.Header.ContentType()
 	delim := ct.parameter("boundary")
 	buf.WriteString("--" + delim)
 	for _, c := range p.Parts {
 		buf.WriteString(CRLF)
 
-		buf.WriteString(c.Header.AsText(avoidUtf8))
+		buf.WriteString(c.Header.AsText(avoidUTF8))
 		buf.WriteString(CRLF)
-		p.appendAnyPart(buf, c, ct, avoidUtf8)
+		p.appendAnyPart(buf, c, ct, avoidUTF8)
 
 		buf.WriteString(CRLF)
 		buf.WriteString("--")
@@ -51,7 +51,7 @@ func (p *Part) appendMultipart(buf *bytes.Buffer, avoidUtf8 bool) {
 // \a ct to the buffer \a buf.
 //
 // The details of this function are certain to change.
-func (p *Part) appendAnyPart(buf *bytes.Buffer, bp *Part, ct *ContentType, avoidUtf8 bool) {
+func (p *Part) appendAnyPart(buf *bytes.Buffer, bp *Part, ct *ContentType, avoidUTF8 bool) {
 	childct := bp.Header.ContentType()
 	e := BinaryEncoding
 	cte := bp.Header.ContentTransferEncoding()
@@ -64,12 +64,12 @@ func (p *Part) appendAnyPart(buf *bytes.Buffer, bp *Part, ct *ContentType, avoid
 		if childct != nil && childct.Subtype != "rfc822" {
 			p.appendTextPart(buf, bp, childct)
 		} else {
-			buf.WriteString(bp.message.Rfc822(avoidUtf8))
+			buf.WriteString(bp.message.RFC822(avoidUTF8))
 		}
 	} else if childct == nil || strings.ToLower(childct.Type) == "text" {
 		p.appendTextPart(buf, bp, childct)
 	} else if childct.Type == "multipart" {
-		bp.appendMultipart(buf, avoidUtf8)
+		bp.appendMultipart(buf, avoidUTF8)
 	} else {
 		buf.WriteString(encodeCTE(bp.Data, e, 72))
 	}
@@ -111,7 +111,7 @@ func (p *Part) appendTextPart(buf *bytes.Buffer, bp *Part, ct *ContentType) {
 // The exact representation returned uses base64 encoding for data types and no
 // ContentTransferEncoding. For text types, it encodes the text according to
 // the ContentType.
-func (p *Part) AsText(avoidUtf8 bool) string {
+func (p *Part) AsText(avoidUTF8 bool) string {
 	r := ""
 	var c *charset.Charset
 
@@ -125,7 +125,7 @@ func (p *Part) AsText(avoidUtf8 bool) string {
 
 	if len(p.Parts) > 0 {
 		buf := bytes.NewBuffer(make([]byte, 0))
-		p.appendMultipart(buf, avoidUtf8)
+		p.appendMultipart(buf, avoidUTF8)
 		r = buf.String()
 	} else if p.Header.ContentType() == nil ||
 		p.Header.ContentType().Type == "text" {
@@ -177,10 +177,10 @@ func (p *Part) parseMultipart(rfc5322, divider string, digest bool) {
 					j++
 				}
 				if start > 0 {
-					h, _ := ReadHeader(rfc5322[start:j], MimeHeader)
+					h, _ := ReadHeader(rfc5322[start:j], MIMEHeader)
 					start += h.numBytes
 					if digest {
-						h.DefaultType = MessageRfc822ContentType
+						h.DefaultType = MessageRFC822ContentType
 					}
 
 					h.Repair()
@@ -392,7 +392,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 		switch h.DefaultType {
 		case TextPlainContentType:
 			h.Add(NewHeaderField("Content-Type", "text/plain"))
-		case MessageRfc822ContentType:
+		case MessageRFC822ContentType:
 			h.Add(NewHeaderField("Content-Type", "message/rfc822"))
 		}
 		ct = h.ContentType()
@@ -599,7 +599,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 			p.parent = bp
 		}
 		bp.message = m
-		body = m.Rfc822(false)
+		body = m.RFC822(false)
 	}
 
 	bp.numBytes = len(body)

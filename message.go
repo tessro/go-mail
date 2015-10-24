@@ -9,7 +9,7 @@ const CRLF = "\015\012"
 
 type Message struct {
 	*Part
-	Rfc822Size   int
+	RFC822Size   int
 	InternalDate int
 }
 
@@ -20,12 +20,12 @@ func ReadMessage(rfc5322 string) (*Message, error) {
 }
 
 func (m *Message) Parse(rfc5322 string) error {
-	h, err := ReadHeader(rfc5322, Rfc5322Header)
+	h, err := ReadHeader(rfc5322, RFC5322Header)
 	if err != nil {
 		return err
 	}
 	m.Header = h
-	m.Rfc822Size = len(rfc5322)
+	m.RFC822Size = len(rfc5322)
 	h.Repair()
 	h.RepairWithBody(m.Part, rfc5322[h.numBytes:])
 
@@ -46,36 +46,36 @@ func (m *Message) Parse(rfc5322 string) error {
 // Returns the message formatted in RFC 822 (actually 2822) format.  The return
 // value is a canonical expression of the message, not whatever was parsed.
 //
-// If \a avoidUtf8 is true, this function loses information rather than
+// If \a avoidUTF8 is true, this function loses information rather than
 // including UTF-8 in the result.
-func (m *Message) Rfc822(avoidUtf8 bool) string {
+func (m *Message) RFC822(avoidUTF8 bool) string {
 	var buf *bytes.Buffer
-	if m.Rfc822Size > 0 {
-		buf = bytes.NewBuffer(make([]byte, 0, m.Rfc822Size))
+	if m.RFC822Size > 0 {
+		buf = bytes.NewBuffer(make([]byte, 0, m.RFC822Size))
 	} else {
 		buf = bytes.NewBuffer(make([]byte, 0, 50000))
 	}
 
-	buf.WriteString(m.Header.AsText(avoidUtf8))
+	buf.WriteString(m.Header.AsText(avoidUTF8))
 	buf.WriteString(CRLF)
-	buf.WriteString(m.Body(avoidUtf8))
+	buf.WriteString(m.Body(avoidUTF8))
 
 	return buf.String()
 }
 
 // Returns the text representation of the body of this message.
-func (m *Message) Body(avoidUtf8 bool) string {
+func (m *Message) Body(avoidUTF8 bool) string {
 	buf := new(bytes.Buffer)
 
 	ct := m.Header.ContentType()
 	if ct != nil && ct.Type == "multipart" {
-		m.appendMultipart(buf, avoidUtf8)
+		m.appendMultipart(buf, avoidUTF8)
 	} else {
 		// FIXME: Is this the right place to restore this linkage?
 		if len(m.Parts) > 0 {
 			firstChild := m.Parts[0]
 			firstChild.Header = m.Header
-			m.appendAnyPart(buf, firstChild, ct, avoidUtf8)
+			m.appendAnyPart(buf, firstChild, ct, avoidUTF8)
 		}
 	}
 

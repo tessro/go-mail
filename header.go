@@ -10,15 +10,15 @@ import (
 type headerMode int
 
 const (
-	Rfc5322Header headerMode = iota
-	MimeHeader
+	RFC5322Header headerMode = iota
+	MIMEHeader
 )
 
 type DefaultContentType int
 
 const (
 	TextPlainContentType DefaultContentType = iota // default
-	MessageRfc822ContentType
+	MessageRFC822ContentType
 )
 
 type Header struct {
@@ -55,7 +55,7 @@ func ReadHeader(rfc5322 string, m headerMode) (h *Header, err error) {
 			j++
 		}
 
-		if j == i+4 && m == Rfc5322Header && strings.ToLower(rfc5322[i:j+1]) == "from " {
+		if j == i+4 && m == RFC5322Header && strings.ToLower(rfc5322[i:j+1]) == "from " {
 			for i < end && rfc5322[i] != '\r' && rfc5322[i] != '\n' {
 				i++
 			}
@@ -155,8 +155,8 @@ func (h *Header) addressField(fn string, n int) *AddressField {
 	switch fn {
 	case FromFieldName, ResentFromFieldName, SenderFieldName, ResentSenderFieldName,
 		ReturnPathFieldName, ReplyToFieldName, ToFieldName, CcFieldName, BccFieldName,
-		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIdFieldName,
-		ContentIdFieldName, ResentMessageIdFieldName, ReferencesFieldName:
+		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIDFieldName,
+		ContentIDFieldName, ResentMessageIDFieldName, ReferencesFieldName:
 		f, _ := h.field(fn, n).(*AddressField)
 		return f
 	}
@@ -251,8 +251,8 @@ func (h *Header) ContentLanguage() *ContentLanguage {
 
 // Returns the value of the Message-ID field, or an empty string if there isn't one.
 // there isn't one, or if there are multiple (which is illegal).
-func (h *Header) MessageId() string {
-	ids := h.Addresses(MessageIdFieldName)
+func (h *Header) MessageID() string {
+	ids := h.Addresses(MessageIDFieldName)
 	if len(ids) != 1 {
 		return ""
 	}
@@ -268,23 +268,23 @@ type HeaderFieldCondition struct {
 }
 
 var conditions = []HeaderFieldCondition{
-	HeaderFieldCondition{SenderFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{ReplyToFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{ToFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{CcFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{BccFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{MessageIdFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{ReferencesFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{SubjectFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{FromFieldName, 1, 1, Rfc5322Header},
-	HeaderFieldCondition{DateFieldName, 1, 1, Rfc5322Header},
-	HeaderFieldCondition{MimeVersionFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{MimeVersionFieldName, 0, 1, MimeHeader},
-	HeaderFieldCondition{ContentTypeFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{ContentTypeFieldName, 0, 1, MimeHeader},
-	HeaderFieldCondition{ContentTransferEncodingFieldName, 0, 1, Rfc5322Header},
-	HeaderFieldCondition{ContentTransferEncodingFieldName, 0, 1, MimeHeader},
-	HeaderFieldCondition{ReturnPathFieldName, 0, 1, Rfc5322Header},
+	HeaderFieldCondition{SenderFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{ReplyToFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{ToFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{CcFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{BccFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{MessageIDFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{ReferencesFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{SubjectFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{FromFieldName, 1, 1, RFC5322Header},
+	HeaderFieldCondition{DateFieldName, 1, 1, RFC5322Header},
+	HeaderFieldCondition{MIMEVersionFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{MIMEVersionFieldName, 0, 1, MIMEHeader},
+	HeaderFieldCondition{ContentTypeFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{ContentTypeFieldName, 0, 1, MIMEHeader},
+	HeaderFieldCondition{ContentTransferEncodingFieldName, 0, 1, RFC5322Header},
+	HeaderFieldCondition{ContentTransferEncodingFieldName, 0, 1, MIMEHeader},
+	HeaderFieldCondition{ReturnPathFieldName, 0, 1, RFC5322Header},
 }
 
 // This private function verifies that the entire header is consistent and
@@ -411,7 +411,7 @@ func (h *Header) Simplify() {
 	cdi := h.ContentDisposition()
 	if cdi != nil {
 		ct := h.ContentType()
-		if h.mode == Rfc5322Header && (ct == nil || ct.Type == "text") &&
+		if h.mode == RFC5322Header && (ct == nil || ct.Type == "text") &&
 			cdi.Disposition == "inline" &&
 			len(cdi.Parameters) == 0 {
 			h.Fields.RemoveAllNamed(ContentDispositionFieldName)
@@ -427,20 +427,20 @@ func (h *Header) Simplify() {
 			h.Fields.RemoveAllNamed(ContentTypeFieldName)
 			ct = nil
 		}
-	} else if h.DefaultType == MessageRfc822ContentType {
+	} else if h.DefaultType == MessageRFC822ContentType {
 		h.Add(NewHeaderField("Content-Type", "message/rfc822"))
 		ct = h.ContentType()
 	}
 
-	if h.mode == MimeHeader {
-		h.Fields.RemoveAllNamed(MimeVersionFieldName)
+	if h.mode == MIMEHeader {
+		h.Fields.RemoveAllNamed(MIMEVersionFieldName)
 	} else if ct == nil && cte == nil && cde == nil && cdi == nil &&
 		h.field(ContentLocationFieldName, 0) == nil &&
 		h.field(ContentBaseFieldName, 0) == nil {
-		h.Fields.RemoveAllNamed(MimeVersionFieldName)
+		h.Fields.RemoveAllNamed(MIMEVersionFieldName)
 	} else {
-		if h.mode == Rfc5322Header && h.field(MimeVersionFieldName, 0) == nil {
-			h.Add(NewHeaderField("Mime-Version", "1.0"))
+		if h.mode == RFC5322Header && h.field(MIMEVersionFieldName, 0) == nil {
+			h.Add(NewHeaderField("MIME-Version", "1.0"))
 		}
 	}
 	if ct != nil &&
@@ -459,9 +459,9 @@ func (h *Header) Simplify() {
 		}
 	}
 
-	m := h.field(MessageIdFieldName, 0)
+	m := h.field(MessageIDFieldName, 0)
 	if m != nil && m.rfc822(false) == "" {
-		h.Fields.RemoveAllNamed(MessageIdFieldName)
+		h.Fields.RemoveAllNamed(MessageIDFieldName)
 	}
 
 	if sameAddresses(h.addressField(FromFieldName, 0), h.addressField(ReplyToFieldName, 0)) {
@@ -594,7 +594,7 @@ func (h *Header) Repair() {
 		if occurrences[name] > 1 &&
 			(name == DateFieldName ||
 				name == ReturnPathFieldName ||
-				name == MessageIdFieldName ||
+				name == MessageIDFieldName ||
 				name == ContentTypeFieldName ||
 				name == ReferencesFieldName) {
 			var firstValid Field
@@ -622,12 +622,12 @@ func (h *Header) Repair() {
 		}
 	}
 
-	// Mime-Version is occasionally seen more than once, usually on
+	// MIME-Version is occasionally seen more than once, usually on
 	// spam or mainsleaze.
-	if h.field(MimeVersionFieldName, 1) != nil {
-		h.Fields.Remove(h.field(MimeVersionFieldName, 1))
-		fmv := h.field(MimeVersionFieldName, 0)
-		fmv.Parse(fmt.Sprintf("1.0 (Note: original message contained %d Mime-Version fields)", occurrences[MimeVersionFieldName]))
+	if h.field(MIMEVersionFieldName, 1) != nil {
+		h.Fields.Remove(h.field(MIMEVersionFieldName, 1))
+		fmv := h.field(MIMEVersionFieldName, 0)
+		fmv.Parse(fmt.Sprintf("1.0 (Note: original message contained %d MIME-Version fields)", occurrences[MIMEVersionFieldName]))
 	}
 
 	// Content-Transfer-Encoding: should not occur on multiparts, and
@@ -711,7 +711,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// If there is no valid Date field and this is an RFC822 header,
 	// we look for a sensible date.
 
-	if h.mode == Rfc5322Header &&
+	if h.mode == RFC5322Header &&
 		(occurrences[DateFieldName] == 0 ||
 			!h.field(DateFieldName, 0).Valid() ||
 			h.Date() != nil) {
@@ -787,7 +787,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// the Header of the closest encompassing Multipart that has such
 	// a field.
 
-	if occurrences[FromFieldName] == 0 && h.mode == Rfc5322Header {
+	if occurrences[FromFieldName] == 0 && h.mode == RFC5322Header {
 		parent := p
 		head := h
 		a := []Address{}
@@ -836,7 +836,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// Some spammers like to get return receipts while hiding their
 	// Fromness, so if From is bad and either Return-Receipt-To or
 	// Disposition-Notification-To is good, use those.
-	if h.mode == Rfc5322Header &&
+	if h.mode == RFC5322Header &&
 		(h.field(FromFieldName, 0) == nil ||
 			!h.field(FromFieldName, 0).Valid() &&
 				len(h.Addresses(FromFieldName)) == 0) {
@@ -889,14 +889,14 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 	if occurrences[ContentLocationFieldName] > 0 ||
 		occurrences[ContentDispositionFieldName] > 0 ||
-		occurrences[ContentIdFieldName] > 0 ||
-		occurrences[MessageIdFieldName] > 0 {
+		occurrences[ContentIDFieldName] > 0 ||
+		occurrences[MessageIDFieldName] > 0 {
 		i := 0
 		for i < len(h.Fields) {
 			if (h.Fields[i].Name() == ContentLocationFieldName ||
 				h.Fields[i].Name() == ContentDispositionFieldName ||
-				h.Fields[i].Name() == ContentIdFieldName ||
-				h.Fields[i].Name() == MessageIdFieldName) &&
+				h.Fields[i].Name() == ContentIDFieldName ||
+				h.Fields[i].Name() == MessageIDFieldName) &&
 				!h.Fields[i].Valid() {
 				h.Fields.RemoveAt(i)
 			} else {
@@ -1273,7 +1273,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// parsing message/delivery-status, doesn't handle xtext, and
 	// doesn't care whether it uses Original-Recipient or
 	// Final-Recipient.
-	if h.mode == Rfc5322Header &&
+	if h.mode == RFC5322Header &&
 		(h.field(FromFieldName, 0) == nil ||
 			h.field(FromFieldName, 0).Error() != nil &&
 				strings.Contains(h.field(FromFieldName, 0).Error().Error(), "No-bounce")) &&
@@ -1344,13 +1344,13 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// knows something about the real origin.
 
 	if occurrences[FromFieldName] == 1 &&
-		occurrences[MessageIdFieldName] == 1 {
+		occurrences[MessageIDFieldName] == 1 {
 		from := h.addressField(FromFieldName, 0)
 		if !from.Valid() {
 			l := from.Addresses
 			if len(l) == 1 && l[0].t == BounceAddressType {
 				var msgid *Address
-				al := h.Addresses(MessageIdFieldName)
+				al := h.Addresses(MessageIDFieldName)
 				if len(al) > 0 {
 					msgid = &al[0]
 				}
@@ -1395,7 +1395,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	// If we have NO From field, or one which contains only <>, use
 	// invalid@invalid.invalid. We try to include a display-name if we
 	// can find one. hackish hacks abound.
-	if h.mode == Rfc5322Header &&
+	if h.mode == RFC5322Header &&
 		(h.field(FromFieldName, 0) == nil ||
 			(!h.field(FromFieldName, 0).Valid() &&
 				h.Addresses(FromFieldName) == nil) ||
@@ -1561,12 +1561,12 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 }
 
 // Returns the canonical text representation of this Header.  Downgrades rather
-// than including UTF-8 if \a avoidUtf8 is true.
-func (h *Header) AsText(avoidUtf8 bool) string {
+// than including UTF-8 if \a avoidUTF8 is true.
+func (h *Header) AsText(avoidUTF8 bool) string {
 	buf := bytes.NewBuffer(make([]byte, 0, len(h.Fields)*100))
 
 	for _, f := range h.Fields {
-		h.appendField(buf, f, avoidUtf8)
+		h.appendField(buf, f, avoidUTF8)
 	}
 
 	return buf.String()
@@ -1578,13 +1578,13 @@ func (h *Header) AsText(avoidUtf8 bool) string {
 // This function doesn't wrap. That's probably a bug. How to fix it?
 //
 // (The details of the function are liable to change.)
-func (h *Header) appendField(buf *bytes.Buffer, f Field, avoidUtf8 bool) {
+func (h *Header) appendField(buf *bytes.Buffer, f Field, avoidUTF8 bool) {
 	if f == nil {
 		return
 	}
 
 	buf.WriteString(f.Name())
 	buf.WriteString(": ")
-	buf.WriteString(f.rfc822(avoidUtf8))
+	buf.WriteString(f.rfc822(avoidUTF8))
 	buf.WriteString(CRLF)
 }

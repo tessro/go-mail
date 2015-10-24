@@ -195,7 +195,18 @@ func headerCase(str string) string {
 		}
 		i++
 	}
-	return buf.String()
+
+	// MIME-* and *-ID headers are special
+	s := buf.String()
+	l := len(s)
+	if l > 5 && s[:5] == "Mime-" {
+		s = "MIME-" + s[5:]
+	}
+	if l > 3 && s[l-3:] == "-Id" {
+		s = s[:l-3] + "-ID"
+	}
+
+	return s
 }
 
 // Returns a copy of this string where leading and trailing whitespace have

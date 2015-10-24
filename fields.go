@@ -24,8 +24,8 @@ const (
 	ResentToFieldName                = "Resent-To"
 	ResentCcFieldName                = "Resent-Cc"
 	ResentBccFieldName               = "Resent-Bcc"
-	MessageIdFieldName               = "Message-Id"
-	ResentMessageIdFieldName         = "Resent-Message-Id"
+	MessageIDFieldName               = "Message-ID"
+	ResentMessageIDFieldName         = "Resent-Message-ID"
 	InReplyToFieldName               = "In-Reply-To"
 	ReferencesFieldName              = "References"
 	DateFieldName                    = "Date"
@@ -38,8 +38,8 @@ const (
 	ContentTransferEncodingFieldName = "Content-Transfer-Encoding"
 	ContentDispositionFieldName      = "Content-Disposition"
 	ContentDescriptionFieldName      = "Content-Description"
-	ContentIdFieldName               = "Content-Id"
-	MimeVersionFieldName             = "Mime-Version"
+	ContentIDFieldName               = "Content-ID"
+	MIMEVersionFieldName             = "MIME-Version"
 	ReceivedFieldName                = "Received"
 	ContentLanguageFieldName         = "Content-Language"
 	ContentLocationFieldName         = "Content-Location"
@@ -77,8 +77,8 @@ var fieldNames = []string{
 	ResentToFieldName,
 	ResentCcFieldName,
 	ResentBccFieldName,
-	MessageIdFieldName,
-	ResentMessageIdFieldName,
+	MessageIDFieldName,
+	ResentMessageIDFieldName,
 	InReplyToFieldName,
 	ReferencesFieldName,
 	DateFieldName,
@@ -91,8 +91,8 @@ var fieldNames = []string{
 	ContentTransferEncodingFieldName,
 	ContentDispositionFieldName,
 	ContentDescriptionFieldName,
-	ContentIdFieldName,
-	MimeVersionFieldName,
+	ContentIDFieldName,
+	MIMEVersionFieldName,
 	ReceivedFieldName,
 	ContentLanguageFieldName,
 	ContentLocationFieldName,
@@ -121,7 +121,7 @@ type Field interface {
 	UnparsedValue() string
 	SetUnparsedValue(value string)
 
-	rfc822(avoidUtf8 bool) string
+	rfc822(avoidUTF8 bool) string
 }
 
 type Fields []Field
@@ -176,16 +176,16 @@ func (f *HeaderField) Parse(s string) {
 	switch f.name {
 	case FromFieldName, ResentFromFieldName, SenderFieldName, ReturnPathFieldName,
 		ResentSenderFieldName, ToFieldName, CcFieldName, BccFieldName, ReplyToFieldName,
-		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIdFieldName,
-		ContentIdFieldName, ResentMessageIdFieldName, ReferencesFieldName, DateFieldName,
+		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIDFieldName,
+		ContentIDFieldName, ResentMessageIDFieldName, ReferencesFieldName, DateFieldName,
 		OrigDateFieldName, ResentDateFieldName, ContentTypeFieldName,
 		ContentTransferEncodingFieldName, ContentDispositionFieldName,
 		ContentLanguageFieldName:
 		// These should be handled by their own parse()
 	case ContentDescriptionFieldName, SubjectFieldName, CommentsFieldName:
 		f.parseText(s)
-	case MimeVersionFieldName:
-		f.parseMimeVersion(s)
+	case MIMEVersionFieldName:
+		f.parseMIMEVersion(s)
 	case ContentLocationFieldName:
 		f.parseContentLocation(s)
 	case InReplyToFieldName, KeywordsFieldName, ReceivedFieldName, ContentMd5FieldName:
@@ -260,13 +260,13 @@ func (f *HeaderField) parseText(s string) {
 	}
 }
 
-// Parses the Mime-Version field from \a s and resolutely ignores all problems
+// Parses the MIME-Version field from \a s and resolutely ignores all problems
 // seen.
 //
 // Only version 1.0 is legal. Since vast numbers of spammers send other version
 // numbers, we replace other version numbers with 1.0 and a comment. Bayesian
 // analysis tools will probably find the comment to be a sure spam sign.
-func (f *HeaderField) parseMimeVersion(s string) {
+func (f *HeaderField) parseMIMEVersion(s string) {
 	p := newParser(s)
 	p.Comment()
 	v := p.DotAtom()
@@ -430,7 +430,7 @@ func NewAddressField(name string) *AddressField {
 // Generates the RFC 822 representation of the field, based on the addresses().
 // If \a avoidUTf8 is true, rfc822() will be lossy rather than include any
 // UTF-8.
-func (f *AddressField) rfc822(avoidUtf8 bool) string {
+func (f *AddressField) rfc822(avoidUTF8 bool) string {
 	s := ""
 
 	name := f.Name()
@@ -441,9 +441,9 @@ func (f *AddressField) rfc822(avoidUtf8 bool) string {
 		} else if f.Addresses[0].t == NormalAddressType {
 			s = "<" + f.Addresses[0].lpdomain() + ">"
 		}
-	} else if name == MessageIdFieldName ||
-		name == ResentMessageIdFieldName ||
-		name == ContentIdFieldName ||
+	} else if name == MessageIDFieldName ||
+		name == ResentMessageIDFieldName ||
+		name == ContentIDFieldName ||
 		name == ReferencesFieldName && len(f.Addresses) == 0 {
 		if len(f.Addresses) > 0 {
 			s = "<" + f.Addresses[0].toString(false) + ">"
@@ -483,7 +483,7 @@ func (f *AddressField) rfc822(avoidUtf8 bool) string {
 		}
 
 		for i, addr := range f.Addresses {
-			a := addr.toString(avoidUtf8)
+			a := addr.toString(avoidUTF8)
 
 			if f.Name() == ReferencesFieldName {
 				a = "<" + a + ">"
@@ -596,10 +596,10 @@ func (f *AddressField) Parse(s string) {
 				f.err = nil
 			}
 		}
-	case ContentIdFieldName:
-		f.parseContentId(s)
-	case MessageIdFieldName, ResentMessageIdFieldName:
-		f.parseMessageId(s)
+	case ContentIDFieldName:
+		f.parseContentID(s)
+	case MessageIDFieldName, ResentMessageIDFieldName:
+		f.parseMessageID(s)
 	case ReferencesFieldName:
 		f.parseReferences(s)
 	default:
@@ -657,7 +657,7 @@ func (f *AddressField) parseReferences(s string) {
 
 // Parses the RFC 2822 msg-id production from \a s and/or records the first
 // serious error found.
-func (f *AddressField) parseMessageId(s string) {
+func (f *AddressField) parseMessageID(s string) {
 	ap := references(s)
 
 	if ap.firstError != nil {
@@ -669,8 +669,8 @@ func (f *AddressField) parseMessageId(s string) {
 	}
 }
 
-// Like parseMessageId( \a s ), except that it also accepts <blah>.
-func (f *AddressField) parseContentId(s string) {
+// Like parseMessageID( \a s ), except that it also accepts <blah>.
+func (f *AddressField) parseContentID(s string) {
 	ap := NewAddressParser(s)
 	f.err = ap.firstError
 	if len(ap.Addresses) != 1 {
@@ -818,28 +818,28 @@ func (f *DateField) Parse(s string) {
 	f.err = errors.New("mail: header could not be parsed")
 }
 
-type MimeParameter struct {
+type MIMEParameter struct {
 	Name, Value string
 	Parts       map[int]string
 }
 
-func NewMimeParameter(name, value string) MimeParameter {
-	return MimeParameter{
+func NewMIMEParameter(name, value string) MIMEParameter {
+	return MIMEParameter{
 		Name:  name,
 		Value: value,
 		Parts: make(map[int]string),
 	}
 }
 
-type MimeField struct {
+type MIMEField struct {
 	HeaderField
 	baseValue  string
-	Parameters []MimeParameter
+	Parameters []MIMEParameter
 }
 
 // Returns the value of the parameter named \a n (ignoring the case of the
 // name). If there is no such parameter, this function returns an empty string.
-func (f *MimeField) parameter(n string) string {
+func (f *MIMEField) parameter(n string) string {
 	s := strings.ToLower(n)
 	for _, p := range f.Parameters {
 		if p.Name == s {
@@ -850,7 +850,7 @@ func (f *MimeField) parameter(n string) string {
 }
 
 // Adds a parameter named \a n with value \a v, replacing any previous setting.
-func (f *MimeField) addParameter(n, v string) {
+func (f *MIMEField) addParameter(n, v string) {
 	s := strings.ToLower(n)
 	found := false
 	for i := 0; i < len(f.Parameters); i++ {
@@ -860,14 +860,14 @@ func (f *MimeField) addParameter(n, v string) {
 		}
 	}
 	if !found {
-		p := MimeParameter{Name: n, Value: v}
+		p := MIMEParameter{Name: n, Value: v}
 		f.Parameters = append(f.Parameters, p)
 	}
 }
 
 // Removes the parameter named \a n (without regard to case), or does nothing
 // if there is no such parameter.
-func (f *MimeField) removeParameter(n string) {
+func (f *MIMEField) removeParameter(n string) {
 	s := strings.ToLower(n)
 	for i, p := range f.Parameters {
 		if p.Name == s {
@@ -879,7 +879,7 @@ func (f *MimeField) removeParameter(n string) {
 
 // Parses \a p, which is expected to refer to a string whose next characters
 // form the RFC 2045 production '*(";"parameter)'.
-func (f *MimeField) parseParameters(p *parser) {
+func (f *MIMEField) parseParameters(p *parser) {
 	done := false
 	first := true
 	for f.Valid() && !done {
@@ -902,7 +902,7 @@ func (f *MimeField) parseParameters(p *parser) {
 		}
 		first = false
 		if !done {
-			n := strings.ToLower(p.MimeToken())
+			n := strings.ToLower(p.MIMEToken())
 			p.Comment()
 			havePart := false
 			partNumber := 0
@@ -930,7 +930,7 @@ func (f *MimeField) parseParameters(p *parser) {
 					}
 				}
 				if !exists {
-					param := NewMimeParameter("charset", n)
+					param := NewMIMEParameter("charset", n)
 					f.Parameters = append(f.Parameters, param)
 					return
 				}
@@ -949,15 +949,15 @@ func (f *MimeField) parseParameters(p *parser) {
 			p.Whitespace()
 			v := ""
 			if p.NextChar() == '"' {
-				v = p.MimeValue()
+				v = p.MIMEValue()
 			} else {
 				start := p.Pos()
-				v = p.MimeValue()
+				v = p.MIMEValue()
 				ok := true
 				for ok && !p.AtEnd() &&
 					p.NextChar() != ';' &&
 					p.NextChar() != '"' {
-					if p.DotAtom() == "" && p.MimeValue() == "" {
+					if p.DotAtom() == "" && p.MIMEValue() == "" {
 						ok = false
 					}
 				}
@@ -976,7 +976,7 @@ func (f *MimeField) parseParameters(p *parser) {
 					i++
 				}
 				if i >= len(f.Parameters) {
-					param := NewMimeParameter(n, "")
+					param := NewMIMEParameter(n, "")
 					f.Parameters = append(f.Parameters, param)
 				}
 				if havePart {
@@ -1004,7 +1004,7 @@ func (f *MimeField) parseParameters(p *parser) {
 
 // This reimplementation of rfc822() never generates UTF-8 at the moment.
 // Merely a SMoP, but I haven't the guts to do it at the moment.
-func (f *MimeField) rfc822(avoidUtf8 bool) string {
+func (f *MIMEField) rfc822(avoidUTF8 bool) string {
 	s := f.baseValue
 	lineLength := len(f.Name()) + 2 + len(s)
 
@@ -1040,21 +1040,21 @@ func (f *MimeField) rfc822(avoidUtf8 bool) string {
 
 // Like HeaderField::value(), returns the contents of this MIME field in a
 // representation suitable for storage.
-func (f *MimeField) Value() string {
+func (f *MIMEField) Value() string {
 	return f.rfc822(false)
 	// the best that can be said about this is that it corresponds to
 	// HeaderField::assemble.
 }
 
 type ContentType struct {
-	MimeField
+	MIMEField
 	Type, Subtype string
 }
 
 func NewContentType() *ContentType {
 	hf := HeaderField{name: ContentTypeFieldName}
-	mf := MimeField{HeaderField: hf}
-	return &ContentType{MimeField: mf}
+	mf := MIMEField{HeaderField: hf}
+	return &ContentType{MIMEField: mf}
 }
 
 func (f *ContentType) Parse(s string) {
@@ -1074,7 +1074,7 @@ func (f *ContentType) Parse(s string) {
 		if p.NextChar() == '/' {
 			mustGuess = true
 		} else {
-			f.Type = strings.ToLower(p.MimeToken())
+			f.Type = strings.ToLower(p.MIMEToken())
 		}
 		if p.AtEnd() {
 			if s == "text" {
@@ -1107,7 +1107,7 @@ func (f *ContentType) Parse(s string) {
 			if p.NextChar() == '/' {
 				p.Step(1)
 				if !p.AtEnd() || p.NextChar() != ';' {
-					f.Subtype = strings.ToLower(p.MimeToken())
+					f.Subtype = strings.ToLower(p.MIMEToken())
 				}
 				if f.Subtype == "" {
 					mustGuess = true
@@ -1205,20 +1205,20 @@ func (f *ContentType) Parse(s string) {
 }
 
 type ContentTransferEncoding struct {
-	MimeField
+	MIMEField
 	Encoding EncodingType
 }
 
 func NewContentTransferEncoding() *ContentTransferEncoding {
 	hf := HeaderField{name: ContentTransferEncodingFieldName}
-	mf := MimeField{HeaderField: hf}
-	return &ContentTransferEncoding{MimeField: mf}
+	mf := MIMEField{HeaderField: hf}
+	return &ContentTransferEncoding{MIMEField: mf}
 }
 
 func (f *ContentTransferEncoding) Parse(s string) {
 	p := newParser(s)
 
-	t := strings.ToLower(p.MimeValue())
+	t := strings.ToLower(p.MIMEValue())
 	p.Comment()
 	// FIXME: shouldn't we do p.end() here and record parse errors?
 
@@ -1243,21 +1243,21 @@ func (f *ContentTransferEncoding) Parse(s string) {
 }
 
 type ContentDisposition struct {
-	MimeField
+	MIMEField
 	Disposition string
 }
 
 func NewContentDisposition() *ContentDisposition {
 	hf := HeaderField{name: ContentDispositionFieldName}
-	mf := MimeField{HeaderField: hf}
-	return &ContentDisposition{MimeField: mf}
+	mf := MIMEField{HeaderField: hf}
+	return &ContentDisposition{MIMEField: mf}
 }
 
 func (f *ContentDisposition) Parse(s string) {
 	p := newParser(s)
 
 	m := p.mark()
-	t := strings.ToLower(p.MimeToken())
+	t := strings.ToLower(p.MIMEToken())
 	p.Whitespace()
 	if p.NextChar() == '=' && t != "inline" && t != "attachment" {
 		p.restore(m) // handle c-d: filename=foo
@@ -1280,21 +1280,21 @@ func (f *ContentDisposition) Parse(s string) {
 }
 
 type ContentLanguage struct {
-	MimeField
+	MIMEField
 	Languages []string
 }
 
 func NewContentLanguage() *ContentLanguage {
 	hf := HeaderField{name: ContentLanguageFieldName}
-	mf := MimeField{HeaderField: hf}
-	return &ContentLanguage{MimeField: mf}
+	mf := MIMEField{HeaderField: hf}
+	return &ContentLanguage{MIMEField: mf}
 }
 
 func (f *ContentLanguage) Parse(s string) {
 	p := newParser(s)
 	for {
 		p.Comment()
-		t := p.MimeToken()
+		t := p.MIMEToken()
 		if t != "" {
 			f.Languages = append(f.Languages, t)
 		}
@@ -1317,13 +1317,13 @@ func NewHeaderFieldNamed(name string) Field {
 	var hf Field
 	switch n {
 	case InReplyToFieldName, SubjectFieldName, CommentsFieldName, KeywordsFieldName,
-		ContentDescriptionFieldName, MimeVersionFieldName, ReceivedFieldName,
+		ContentDescriptionFieldName, MIMEVersionFieldName, ReceivedFieldName,
 		ContentLocationFieldName, ContentMd5FieldName, ListIdFieldName:
 		hf = &HeaderField{name: n}
 	case FromFieldName, ResentFromFieldName, SenderFieldName, ResentSenderFieldName,
 		ReturnPathFieldName, ReplyToFieldName, ToFieldName, CcFieldName, BccFieldName,
-		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIdFieldName,
-		ContentIdFieldName, ResentMessageIdFieldName, ReferencesFieldName:
+		ResentToFieldName, ResentCcFieldName, ResentBccFieldName, MessageIDFieldName,
+		ContentIDFieldName, ResentMessageIDFieldName, ReferencesFieldName:
 		hf = NewAddressField(n)
 	case DateFieldName, OrigDateFieldName, ResentDateFieldName:
 		hf = NewDateField()
@@ -1366,13 +1366,13 @@ func NewHeaderField(name, value string) Field {
 // properly folded and, if necessary, RFC 2047 encoded. This is a string we can
 // hand out to clients.
 //
-// If \a avoidUtf8 is true, rfc822() avoids UTF-8 in the result, even at the
+// If \a avoidUTF8 is true, rfc822() avoids UTF-8 in the result, even at the
 // cost of losing information.
-func (f *HeaderField) rfc822(avoidUtf8 bool) string {
+func (f *HeaderField) rfc822(avoidUTF8 bool) string {
 	if f.Name() == SubjectFieldName ||
 		f.Name() == CommentsFieldName ||
 		f.Name() == ContentDescriptionFieldName {
-		if avoidUtf8 {
+		if avoidUTF8 {
 			return wrap(encodeText(f.value), 78, "", " ", false)
 		} else {
 			return wrap(f.value, 78, "", " ", false)
