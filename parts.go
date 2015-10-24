@@ -496,14 +496,14 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 		}
 
 		// FIXME: codec state probably matters here and we ignored it (aox cares)
-		if specified && decodeErr == nil {
+		if specified && decodeErr != nil {
 			// the codec was specified, and the specified codec
 			// resulted in an error, but did not abort conversion. we
 			// respond by forgetting the error, using the conversion
 			// result (probably including one or more U+FFFD) and
 			// labelling the message as UTF-8.
 			body = bp.Text
-		} else if !specified && decodeErr == nil {
+		} else if !specified && decodeErr != nil {
 			// the codec was not specified, and we couldn't find
 			// anything. we call it unknown-8bit.
 			bp.Text, _ = decode(body, "unknown-8bit")

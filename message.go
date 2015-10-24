@@ -8,13 +8,13 @@ import (
 const CRLF = "\015\012"
 
 type Message struct {
-	Part
+	*Part
 	Rfc822Size   int
 	InternalDate int
 }
 
 func ReadMessage(rfc5322 string) (*Message, error) {
-	m := &Message{}
+	m := &Message{Part: &Part{}}
 	err := m.Parse(rfc5322)
 	return m, err
 }
@@ -27,14 +27,14 @@ func (m *Message) Parse(rfc5322 string) error {
 	m.Header = h
 	m.Rfc822Size = len(rfc5322)
 	h.Repair()
-	h.RepairWithBody(&m.Part, rfc5322[h.numBytes:])
+	h.RepairWithBody(m.Part, rfc5322[h.numBytes:])
 
 	ct := h.ContentType()
 	if ct != nil && ct.Type == "multipart" {
 		m.parseMultipart(rfc5322, ct.parameter("boundary"), ct.Subtype == "digest")
 	} else {
 		bp := m.parseBodypart(rfc5322[h.numBytes:], h)
-		m.Parts = append(m.Parts, bp)
+		m.Part = bp
 	}
 
 	//m.fix8BitHeaderFields()
@@ -137,7 +137,7 @@ func (m *Message) BodyPart(s string, create bool) *Part {
 			} else {
 				child = &Part{
 					Number: n,
-					parent: &m.Part,
+					parent: m.Part,
 				}
 			}
 			cs = append(append(cs[:i], child), cs[i:]...)
