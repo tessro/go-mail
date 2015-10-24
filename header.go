@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-type HeaderMode int
+type headerMode int
 
 const (
-	Rfc5322Header HeaderMode = iota
+	Rfc5322Header headerMode = iota
 	MimeHeader
 )
 
@@ -24,7 +24,7 @@ const (
 type Header struct {
 	DefaultType DefaultContentType
 
-	mode   HeaderMode
+	mode   headerMode
 	Fields Fields
 
 	numBytes int
@@ -33,7 +33,7 @@ type Header struct {
 	verified bool
 }
 
-func ReadHeader(rfc5322 string, m HeaderMode) (h *Header, err error) {
+func ReadHeader(rfc5322 string, m headerMode) (h *Header, err error) {
 	h = &Header{mode: m}
 	done := false
 
@@ -264,7 +264,7 @@ func (h *Header) MessageId() string {
 type HeaderFieldCondition struct {
 	name     string
 	min, max int
-	m        HeaderMode
+	m        headerMode
 }
 
 var conditions = []HeaderFieldCondition{
