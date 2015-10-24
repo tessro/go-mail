@@ -14,15 +14,15 @@ const (
 	MIMEHeader
 )
 
-type DefaultContentType int
+type defaultContentType int
 
 const (
-	TextPlainContentType DefaultContentType = iota // default
+	TextPlainContentType defaultContentType = iota // default
 	MessageRFC822ContentType
 )
 
 type Header struct {
-	DefaultType DefaultContentType
+	defaultType defaultContentType
 
 	mode   headerMode
 	Fields Fields
@@ -422,12 +422,12 @@ func (h *Header) Simplify() {
 	ct := h.ContentType()
 	if ct != nil {
 		if len(ct.Parameters) == 0 && cte == nil && cdi == nil && cde == nil &&
-			h.DefaultType == TextPlainContentType &&
+			h.defaultType == TextPlainContentType &&
 			ct.Type == "text" && ct.Subtype == "plain" {
 			h.Fields.RemoveAllNamed(ContentTypeFieldName)
 			ct = nil
 		}
-	} else if h.DefaultType == MessageRFC822ContentType {
+	} else if h.defaultType == MessageRFC822ContentType {
 		h.Add(NewHeaderField("Content-Type", "message/rfc822"))
 		ct = h.ContentType()
 	}

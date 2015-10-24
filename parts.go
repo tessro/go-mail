@@ -180,7 +180,7 @@ func (p *Part) parseMultipart(rfc5322, divider string, digest bool) {
 					h, _ := ReadHeader(rfc5322[start:j], MIMEHeader)
 					start += h.numBytes
 					if digest {
-						h.DefaultType = MessageRFC822ContentType
+						h.defaultType = MessageRFC822ContentType
 					}
 
 					h.Repair()
@@ -389,7 +389,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 
 	ct := h.ContentType()
 	if ct == nil {
-		switch h.DefaultType {
+		switch h.defaultType {
 		case TextPlainContentType:
 			h.Add(NewHeaderField("Content-Type", "text/plain"))
 		case MessageRFC822ContentType:
