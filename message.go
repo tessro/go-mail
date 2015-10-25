@@ -13,8 +13,12 @@ type Message struct {
 	InternalDate int
 }
 
+func NewMessage() *Message {
+	return &Message{Part: &Part{}}
+}
+
 func ReadMessage(rfc5322 string) (*Message, error) {
-	m := &Message{Part: &Part{}}
+	m := NewMessage()
 	err := m.Parse(rfc5322)
 	return m, err
 }

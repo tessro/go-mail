@@ -591,7 +591,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 		for rfc5322[start] == 13 || rfc5322[start] == 10 {
 			start++
 		}
-		m := &Message{}
+		m := NewMessage()
 		m.parent = bp
 		m.Parse(rfc5322[start:end])
 		for _, p := range m.Parts {
