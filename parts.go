@@ -176,7 +176,7 @@ func (p *Part) parseMultipart(rfc5322, divider string, digest bool) {
 				if j < len(rfc5322) && rfc5322[j] == 10 {
 					j++
 				}
-				if start > 0 {
+				if start > 0 && start < len(rfc5322) {
 					h, _ := ReadHeader(rfc5322[start:j], MIMEHeader)
 					start += h.numBytes
 					if digest {
