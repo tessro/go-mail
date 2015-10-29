@@ -261,8 +261,8 @@ func (h *Header) ContentLanguage() *ContentLanguage {
 	return f.(*ContentLanguage)
 }
 
-// Returns the value of the Message-ID field, or an empty string if there isn't one.
-// there isn't one, or if there are multiple (which is illegal).
+// Returns the value of the Message-ID field, or an empty string if there isn't one
+// or if there are multiple (which is illegal).
 func (h *Header) MessageID() string {
 	ids := h.Addresses(MessageIDFieldName)
 	if len(ids) != 1 {
@@ -1207,7 +1207,11 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			if !hf.Valid() {
 				bad = append(bad, ct)
 			} else if ct.Type == "text" && ct.Subtype == "html" {
-				b := strings.ToLower(simplify(body[0:2048]))
+				l := len(body)
+				if l > 2048 {
+					l = 2048
+				}
+				b := strings.ToLower(simplify(body[:l]))
 				if strings.HasPrefix(b, "<!doctype") ||
 					strings.HasPrefix(b, "<html") {
 					good = append(good, ct)

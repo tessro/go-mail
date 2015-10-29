@@ -1,0 +1,28 @@
+MIME-Version: 1.0
+Date: Wed, 28 Oct 2015 19:41:32 -0700
+Subject: Multipart email!
+From: sender <sender@example.com>
+To: recipient <recipient@example.com>
+Content-Type: multipart/alternative; boundary=001a113cf310b9e6fa0523353f0f
+Message-ID: <valid@message-id>
+
+--001a113cf310b9e6fa0523353f0f
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Content-ID: invalid-id-with-no-brackets
+
+Cat! =F0=9F=90=B1=F0=9F=98=80
+
+[image: Inline image 1]
+
+--001a113cf310b9e6fa0523353f0f
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Content-ID: <valid-id@example>
+
+<div dir=3D"ltr">Cat!=C2=A0=F0=9F=90=B1=F0=9F=98=80<div><br></div><div><img=
+ src=3D"cid:ii_150b178a80ecad03" alt=3D"Inline image 1" style=3D"margin-rig=
+ht: 0px;"><br clear=3D"all"><div><br></div>
+</div></div>
+
+--001a113cf310b9e6fa0523353f0f--

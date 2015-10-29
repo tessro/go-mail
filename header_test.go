@@ -212,3 +212,28 @@ func TestEncodedWords(t *testing.T) {
 		}
 	}
 }
+
+func TestMessageID(t *testing.T) {
+	msg := loadFixture(t, "message-id")
+
+	if msg.Header == nil {
+		t.Fatal("missing Header struct")
+	}
+
+	msgid := msg.Header.MessageID()
+	if msgid != "<valid@message-id>" {
+		t.Errorf("incorrect Message-ID: expected <valid@message-id>, got %s", msgid)
+	}
+
+	parts := msg.Parts
+	if len(parts) != 2 {
+		t.Errorf("incorrect number of message parts: expected 2, got %d", len(parts))
+		t.FailNow()
+	}
+
+	testStringEquals(t, "Part 1 Content-ID", parts[0].Header.Fields[2].Name(), "Content-ID")
+	testStringEquals(t, "Part 1 Content-ID", parts[0].Header.Fields[2].Value(), "<invalid-id-with-no-brackets>")
+
+	testStringEquals(t, "Part 2 Content-ID", parts[1].Header.Fields[2].Name(), "Content-ID")
+	testStringEquals(t, "Part 2 Content-ID", parts[1].Header.Fields[2].Value(), "<valid-id@example>")
+}

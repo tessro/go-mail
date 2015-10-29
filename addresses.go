@@ -842,7 +842,7 @@ func (p *AddressParser) address(i int) int {
 		var dom string
 		dom, i = p.domain(i)
 		lp := ""
-		if s[i] == '@' {
+		if i >= 0 && s[i] == '@' {
 			i--
 			for i > 0 && s[i] == '@' {
 				i--
