@@ -282,7 +282,7 @@ func (p *parser) encodedWord(t EncodedTextType) string {
 	} else if p.Present("b") {
 		encoding = Base64Encoding
 	} else {
-		p.err = fmt.Errorf("Unknown encoding: %s", p.NextChar())
+		p.err = fmt.Errorf("Unknown encoding: %c", p.NextChar())
 	}
 
 	p.require("?")
