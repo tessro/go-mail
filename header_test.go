@@ -149,6 +149,11 @@ func TestEncodedWords(t *testing.T) {
 		t.Fatal("missing Header struct")
 	}
 
+	subject := msg.Header.Subject()
+	if subject != "Testing encoded words! ☺" {
+		t.Errorf("incorrect Subject: expected \"Testing encoded words! ☺\", got %s", subject)
+	}
+
 	from := msg.Header.Addresses("From")
 	if len(from) != 1 {
 		t.Errorf("incorrect number of From addresses: expected 1, got %d", len(from))

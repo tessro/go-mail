@@ -175,6 +175,17 @@ func (h *Header) Date() *time.Time {
 	return hf.Date
 }
 
+// Returns the value of the first Subject header field. If there is no such
+// field, returns the empty string.
+func (h *Header) Subject() string {
+	f := h.field(SubjectFieldName, 0)
+	if f == nil {
+		return ""
+	}
+
+	return f.Value()
+}
+
 // Returns a pointer to the addresses in the \a t header field, which must be
 // an address field such as From or Bcc. If not, or if the field is empty,
 // addresses() returns a null pointer.
