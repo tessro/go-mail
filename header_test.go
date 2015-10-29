@@ -41,6 +41,12 @@ func testStringEquals(t *testing.T, field, actual, expected string) {
 	}
 }
 
+func testIntegerEquals(t *testing.T, field string, actual, expected int) {
+	if actual != expected {
+		t.Errorf("incorrect %s:\nexpected %d,\n     got %d", field, expected, actual)
+	}
+}
+
 // Error(args ...interface{})
 // Errorf(format string, args ...interface{})
 // Fail()

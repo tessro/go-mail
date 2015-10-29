@@ -165,10 +165,10 @@ func (p *Part) parseMultipart(rfc5322, divider string, digest bool) {
 					l = true
 				}
 			}
-			for rfc5322[j] == ' ' || rfc5322[j] == '\t' {
+			for j < end && (rfc5322[j] == ' ' || rfc5322[j] == '\t') {
 				j++
 			}
-			if rfc5322[j] == 13 || rfc5322[j] == 10 || j >= len(rfc5322) {
+			if j >= len(rfc5322) || rfc5322[j] == 13 || rfc5322[j] == 10 {
 				// finally. we accept that as a boundary line.
 				if j < len(rfc5322) && rfc5322[j] == 13 {
 					j++
