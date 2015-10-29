@@ -140,3 +140,64 @@ func TestCFWS(t *testing.T) {
 	messageID := msg.Header.MessageID()
 	testStringEquals(t, "Message-ID", messageID, "<testabcd.1234@silly.test>")
 }
+
+// Relevant RFC: https://tools.ietf.org/html/rfc2047
+func TestEncodedWords(t *testing.T) {
+	msg := loadFixture(t, "encoded-words")
+
+	if msg.Header == nil {
+		t.Fatal("missing Header struct")
+	}
+
+	from := msg.Header.Addresses("From")
+	if len(from) != 1 {
+		t.Errorf("incorrect number of From addresses: expected 1, got %d", len(from))
+	} else if from[0].String() != "invalid quotes <invalid.quotes@example.com>" {
+		t.Errorf("incorrect From address: expected \"invalid quotes <invalid.quotes@example.com>\", got %s", from[0].String())
+	}
+
+	// Test for non-standard "Q"-encoding: the Reply-To header in this fixture
+	// contains a '.' in a Q-encoded word within a phrase.
+	//
+	// From RFC 2047:
+	//
+	//   An 'encoded-word' may appear in a message header or body part header
+	//   according to the following rules:
+	//
+	//   [...]
+	//
+	//   (3) As a replacement for a 'word' entity within a 'phrase', for example,
+	//   one that precedes an address in a From, To, or Cc header.  The ABNF
+	//   definition for 'phrase' from RFC 822 thus becomes:
+	//
+	//   phrase = 1*( encoded-word / word )
+	//
+	//   In this case the set of characters that may be used in a "Q"-encoded
+	//   'encoded-word' is restricted to: <upper and lower case ASCII
+	//   letters, decimal digits, "!", "*", "+", "-", "/", "=", and "_"
+	//   (underscore, ASCII 95.)>.  An 'encoded-word' that appears within a
+	//   'phrase' MUST be separated from any adjacent 'word', 'text' or
+	//   'special' by 'linear-white-space'.
+	//
+	// Note: go-mail outputs a quoted name, since dots in phrases are obsolete.
+	//       (See RFC 5322 Section 4.1)
+	replyTo := msg.Header.Addresses("Reply-To")
+	if len(replyTo) != 1 {
+		t.Errorf("incorrect number of Reply-To addresses: expected 1, got %d", len(replyTo))
+	} else if replyTo[0].String() != `"contains an in.valid dot" <invalid.dot@example.com>` {
+		t.Errorf("incorrect Reply-To address: expected \"\"contains an in.valid dot\" <invalid.dot@example.com>\", got %s", replyTo[0].String())
+	}
+
+	// Test valid "Q"-encoding
+	to := msg.Header.Addresses("To")
+	if len(to) != 2 {
+		t.Errorf("incorrect number of To addresses: expected 2, got %d", len(to))
+	} else {
+		if to[0].String() != "valid <valid@example.com>" {
+			t.Errorf("incorrect To address: expected \"valid <valid@example.com>\", got %s", to[0].String())
+		}
+		if to[1].String() != "mixed example <mixed@example.com>" {
+			t.Errorf("incorrect To address: expected \"mixed example <mixed@example.com>\", got %s", to[1].String())
+		}
+	}
+}

@@ -306,9 +306,10 @@ func (p *parser) encodedWord(t EncodedTextType) string {
 				(c >= '0' && c <= '9') ||
 				(c >= 'a' && c <= 'z') ||
 				(c >= 'A' && c <= 'Z') ||
-				(c == '!' || c == '*' || c == '-' ||
-					c == '/' || c == '=' || c == '_' ||
-					c == '\'')) {
+				(c == '!' || c == '*' || c == '-' || c == '/' ||
+					c == '=' || c == '_' || c == '\'' ||
+					// this is non-standard, but some encoders don't encode dots :(
+					c == '.')) {
 			buf.WriteByte(c)
 			p.Step(1)
 			c = p.NextChar()

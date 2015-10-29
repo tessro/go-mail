@@ -1,0 +1,8 @@
+Subject: =?utf-8?Q?Testing=20encoded=20words!=20=E2=98=BA?=
+From: "=?utf-8?Q?invalid=20quotes?=" <invalid.quotes@example.com>
+Reply-To: =?utf-8?Q?contains=20an=20in.valid=20dot?= <invalid.dot@example.com>
+To: =?utf-8?Q?valid?= <valid@example.com>, mixed =?utf-8?Q?example?= <mixed@example.com>
+Date: Fri, 20 Mar 2015 19:53:37 +0000
+Content-Type: text/plain
+
+This is a sample email that uses encoded words in its headers.

@@ -1066,6 +1066,7 @@ func (p *AddressParser) atom(i int) (string, int) {
 	i = p.comment(i)
 	j := i
 	s := p.s
+	maybeEncodedWord := j-1 > 0 && strings.HasSuffix(s[j-1:j+1], "?=")
 	for i >= 0 &&
 		((s[i] >= 'a' && s[i] <= 'z') ||
 			(s[i] >= 'A' && s[i] <= 'Z') ||
@@ -1080,6 +1081,8 @@ func (p *AddressParser) atom(i int) (string, int) {
 			s[i] == '`' || s[i] == '{' ||
 			s[i] == '|' || s[i] == '}' ||
 			s[i] == '~' ||
+			// this is non-standard, but some encoders don't encode dots :(
+			(maybeEncodedWord && s[i] == '.') ||
 			s[i] >= 128) {
 		i--
 	}
@@ -1118,22 +1121,23 @@ func (p *AddressParser) phrase(i int) (string, int) {
 			}
 			w := unquote(p.s[i:j+1], '"', '\'')
 			l := 0
-			for l >= 0 && !drop {
+			for l >= 0 && l < len(w) && !drop {
 				b := strings.Index(w[l:], "=?")
 				if b >= 0 {
 					b += l
-					e := strings.Index(w[b+2:], "?") // after charset
-					if e >= 0 {
-						e += b + 2
-						e = strings.Index(w[e+1:], "?") // after codec
+					e := b + 2
+					next := strings.Index(w[e:], "?") // after charset
+					if next >= 0 {
+						e += next + 1
+						next = strings.Index(w[e:], "?") // after codec
 					}
-					if e >= 0 {
-						e += e + 1
-						e = strings.Index(w[e+1:], "?=") // at the end
+					if next >= 0 {
+						e += next + 1
+						next = strings.Index(w[e:], "?=") // at the end
 					}
-					if e >= 0 {
-						e += e + 1
-						tmp := de2047(w[b : e+2])
+					if next >= 0 {
+						e += next + 2
+						tmp := de2047(w[b:e])
 						word += w[l:b] + tmp
 						if tmp == "" {
 							drop = true

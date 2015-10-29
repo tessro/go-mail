@@ -796,7 +796,7 @@ func de2047(s string) string {
 			panic(err)
 		}
 	}
-	cw.Write([]byte(s)) // FIXME: Ignores errors
+	cw.Write([]byte(decoded)) // FIXME: Ignores errors
 	return buf.String()
 }
 
