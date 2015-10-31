@@ -86,8 +86,7 @@ func ReadHeader(rfc5322 string, m headerMode) (h *Header, err error) {
 			value := rfc5322[i:j]
 			//233-237
 			if simplify(value) != "" || strings.HasPrefix(strings.ToLower(name), "x-") {
-				f := NewHeaderField(name, value)
-				h.Add(f)
+				h.Add(name, value)
 			}
 			i = j
 			if i+1 < end && rfc5322[i] == '\r' && rfc5322[i+1] == '\n' {
@@ -118,7 +117,13 @@ func (h *Header) Valid() bool {
 	return h.err == nil
 }
 
-func (h *Header) Add(f Field) {
+// Add adds the key, value pair to the header. It appends to any existing
+// values associated with the key.
+func (h *Header) Add(key, value string) {
+	h.addField(NewHeaderField(key, value))
+}
+
+func (h *Header) addField(f Field) {
 	if f.Name() == ToFieldName || f.Name() == CcFieldName ||
 		f.Name() == BccFieldName || f.Name() == ReplyToFieldName ||
 		f.Name() == FromFieldName {
@@ -134,6 +139,17 @@ func (h *Header) Add(f Field) {
 	// TODO: aox implementation allows insertion at specified position
 	h.Fields = append(h.Fields, f)
 	h.verified = false
+}
+
+// Get gets the first value associated with the given key. If there are no
+// values associated with the key, Get returns "".
+func (h *Header) Get(key string) string {
+	f := h.field(key, 0)
+	if f == nil {
+		return ""
+	} else {
+		return f.Value()
+	}
 }
 
 func (h *Header) field(fn string, n int) Field {
@@ -440,7 +456,7 @@ func (h *Header) Simplify() {
 			ct = nil
 		}
 	} else if h.defaultType == MessageRFC822ContentType {
-		h.Add(NewHeaderField("Content-Type", "message/rfc822"))
+		h.Add("Content-Type", "message/rfc822")
 		ct = h.ContentType()
 	}
 
@@ -452,7 +468,7 @@ func (h *Header) Simplify() {
 		h.Fields.RemoveAllNamed(MIMEVersionFieldName)
 	} else {
 		if h.mode == RFC5322Header && h.field(MIMEVersionFieldName, 0) == nil {
-			h.Add(NewHeaderField("MIME-Version", "1.0"))
+			h.Add("MIME-Version", "1.0")
 		}
 	}
 	if ct != nil &&
@@ -789,8 +805,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 		if date != nil {
 			// FIXME: aox inserts at position of existing field, or at end
-			df := NewHeaderField(DateFieldName, date.Format(time.RFC822Z))
-			h.Add(df)
+			h.Add(DateFieldName, date.Format(time.RFC822Z))
 		}
 	}
 
@@ -841,7 +856,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			}
 		}
 		if len(a) > 0 {
-			h.Add(NewHeaderField(FromFieldName, a[0].toString(false)))
+			h.Add(FromFieldName, a[0].toString(false))
 		}
 	}
 
@@ -868,7 +883,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		}
 		if len(a) > 0 {
 			h.Fields.RemoveAllNamed(FromFieldName)
-			h.Add(NewHeaderField(FromFieldName, a[0].toString(false)))
+			h.Add(FromFieldName, a[0].toString(false))
 		}
 	}
 
@@ -1236,10 +1251,10 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		}
 		if len(good) > 0 {
 			h.Fields.RemoveAllNamed(ContentTypeFieldName)
-			h.Add(good[0])
+			h.addField(good[0])
 		} else if len(neutral) == 1 {
 			h.Fields.RemoveAllNamed(ContentTypeFieldName)
-			h.Add(neutral[0])
+			h.addField(neutral[0])
 		}
 	}
 
@@ -1258,7 +1273,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		if ct == nil {
 			ct = h.ContentType()
 			h.Fields.RemoveAllNamed(ContentTypeFieldName)
-			h.Add(ct)
+			h.addField(ct)
 		}
 	}
 
@@ -1345,7 +1360,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 						from.Addresses = []Address{}
 					} else {
 						from = NewAddressField(FromFieldName)
-						h.Add(from)
+						h.addField(from)
 					}
 					from.Addresses = append(from.Addresses, postmaster)
 					break
@@ -1487,7 +1502,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		} else {
 			from = NewAddressField(FromFieldName)
 			from.Addresses = append(from.Addresses, a)
-			h.Add(from)
+			h.addField(from)
 		}
 	}
 
@@ -1533,7 +1548,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 				// more than five lines, all (except the last) equally
 				// long. it really looks like base64.
 				h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
-				h.Add(NewHeaderField(ContentTransferEncodingFieldName, "base64"))
+				h.Add(ContentTransferEncodingFieldName, "base64")
 			} else {
 				// it can be q-p or none. do we really care? can we
 				// even decide reliably? I think we might as well
@@ -1553,8 +1568,8 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		if phaps.Valid() {
 			h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
 			h.Fields.RemoveAllNamed(ContentTypeFieldName)
-			h.Add(phaps)
-			h.Add(NewHeaderField("Content-Type", "application/octet-stream"))
+			h.addField(phaps)
+			h.Add("Content-Type", "application/octet-stream")
 		}
 	}
 

@@ -391,9 +391,9 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 	if ct == nil {
 		switch h.defaultType {
 		case TextPlainContentType:
-			h.Add(NewHeaderField("Content-Type", "text/plain"))
+			h.Add("Content-Type", "text/plain")
 		case MessageRFC822ContentType:
-			h.Add(NewHeaderField("Content-Type", "message/rfc822"))
+			h.Add("Content-Type", "message/rfc822")
 		}
 		ct = h.ContentType()
 	}
@@ -552,7 +552,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 				cte.Encoding = QPEncoding
 			}
 		} else if qp {
-			h.Add(NewHeaderField("Content-Transfer-Encoding", "quoted-printable"))
+			h.Add("Content-Transfer-Encoding", "quoted-printable")
 			cte = h.ContentTransferEncoding()
 		}
 	} else {
@@ -578,7 +578,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 			} else if cte != nil {
 				cte.Encoding = e
 			} else {
-				h.Add(NewHeaderField("Content-Transfer-Encoding", "base64"))
+				h.Add("Content-Transfer-Encoding", "base64")
 				cte = h.ContentTransferEncoding()
 			}
 		}
