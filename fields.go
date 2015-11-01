@@ -794,14 +794,13 @@ func (f *DateField) Parse(s string) {
 
 type MIMEParameter struct {
 	Name, Value string
-	Parts       map[int]string
+	Parts       []string
 }
 
 func NewMIMEParameter(name, value string) MIMEParameter {
 	return MIMEParameter{
 		Name:  name,
 		Value: value,
-		Parts: make(map[int]string),
 	}
 }
 
@@ -954,7 +953,13 @@ func (f *MIMEField) parseParameters(p *parser) {
 					f.Parameters = append(f.Parameters, param)
 				}
 				if havePart {
-					f.Parameters[i].Parts[partNumber] = v
+					gap := partNumber - len(f.Parameters[i].Parts)
+					if gap > 0 {
+						// extend so append works
+						f.Parameters[i].Parts = append(f.Parameters[i].Parts, make([]string, gap)...)
+					}
+
+					f.Parameters[i].Parts = append(f.Parameters[i].Parts, v)
 				} else {
 					f.Parameters[i].Value = v
 				}
@@ -963,14 +968,9 @@ func (f *MIMEField) parseParameters(p *parser) {
 	}
 
 	for _, p := range f.Parameters {
-		if p.Value == "" && p.Parts[0] != "" { // TODO: should probably test presence rather than emptiness
-			// I get to be naughty too sometimes
-			n := 0
-			v, ok := p.Parts[n]
-			for ok {
+		if p.Value == "" && len(p.Parts) > 0 {
+			for _, v := range p.Parts {
 				p.Value += v
-				n++
-				v = p.Parts[n]
 			}
 		}
 	}
