@@ -370,7 +370,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 			f = h.field(ContentTransferEncodingFieldName, i)
 		}
 		if any && i > 1 {
-			h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
+			h.RemoveAllNamed(ContentTransferEncodingFieldName)
 		}
 	}
 
@@ -448,7 +448,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 
 			// the header may contain some unencoded gb2312. we bang
 			// it by hand, ignoring errors.
-			for _, f := range h.Fields {
+			for _, f := range h.fields {
 				if !f.Valid() && f.Name() == SubjectFieldName {
 					hf, ok := f.(*HeaderField)
 					if ok {
@@ -546,7 +546,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 
 		if cte != nil {
 			if !qp {
-				h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
+				h.RemoveAllNamed(ContentTransferEncodingFieldName)
 				cte = nil
 			} else if cte.Encoding != QPEncoding {
 				cte.Encoding = QPEncoding
@@ -573,7 +573,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 			}
 			// change c-t-e to match the encoding decided above
 			if e == BinaryEncoding {
-				h.Fields.RemoveAllNamed(ContentTransferEncodingFieldName)
+				h.RemoveAllNamed(ContentTransferEncodingFieldName)
 				cte = nil
 			} else if cte != nil {
 				cte.Encoding = e

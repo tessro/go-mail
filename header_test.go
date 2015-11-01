@@ -231,9 +231,6 @@ func TestMessageID(t *testing.T) {
 		t.FailNow()
 	}
 
-	testStringEquals(t, "Part 1 Content-ID", parts[0].Header.Fields[2].Name(), "Content-ID")
-	testStringEquals(t, "Part 1 Content-ID", parts[0].Header.Fields[2].Value(), "<invalid-id-with-no-brackets>")
-
-	testStringEquals(t, "Part 2 Content-ID", parts[1].Header.Fields[2].Name(), "Content-ID")
-	testStringEquals(t, "Part 2 Content-ID", parts[1].Header.Fields[2].Value(), "<valid-id@example>")
+	testStringEquals(t, "Part 1 Content-ID", parts[0].Header.Get("Content-ID"), "<invalid-id-with-no-brackets>")
+	testStringEquals(t, "Part 2 Content-ID", parts[1].Header.Get("Content-ID"), "<valid-id@example>")
 }

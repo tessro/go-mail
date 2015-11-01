@@ -124,32 +124,6 @@ type Field interface {
 	rfc822(avoidUTF8 bool) string
 }
 
-type Fields []Field
-
-func (fs *Fields) RemoveAt(i int) {
-	*fs = append((*fs)[:i], (*fs)[i+1:]...)
-}
-
-func (fs *Fields) Remove(r Field) {
-	for i, f := range *fs {
-		if f == r {
-			fs.RemoveAt(i)
-		}
-	}
-}
-
-func (fs *Fields) RemoveAllNamed(name string) {
-	i := 0
-	name = strings.ToLower(name)
-	for i < len(*fs) {
-		if strings.ToLower((*fs)[i].Name()) == name {
-			fs.RemoveAt(i)
-		} else {
-			i++
-		}
-	}
-}
-
 type HeaderField struct {
 	name, value   string
 	unparsedValue string
