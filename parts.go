@@ -448,7 +448,7 @@ func (p *Part) parseBodypart(rfc5322 string, h *Header) *Part {
 
 			// the header may contain some unencoded gb2312. we bang
 			// it by hand, ignoring errors.
-			for _, f := range h.fields {
+			for _, f := range h.Fields {
 				if !f.Valid() && f.Name() == SubjectFieldName {
 					hf, ok := f.(*HeaderField)
 					if ok {

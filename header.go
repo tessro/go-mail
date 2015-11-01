@@ -22,7 +22,7 @@ const (
 )
 
 type Header struct {
-	fields []Field
+	Fields []Field
 
 	defaultType defaultContentType
 
@@ -137,16 +137,16 @@ func (h *Header) addField(f Field) {
 		}
 	}
 	// TODO: aox implementation allows insertion at specified position
-	h.fields = append(h.fields, f)
+	h.Fields = append(h.Fields, f)
 	h.verified = false
 }
 
 func (h *Header) RemoveAt(i int) {
-	h.fields = append(h.fields[:i], h.fields[i+1:]...)
+	h.Fields = append(h.Fields[:i], h.Fields[i+1:]...)
 }
 
 func (h *Header) Remove(r Field) {
-	for i, f := range h.fields {
+	for i, f := range h.Fields {
 		if f == r {
 			h.RemoveAt(i)
 		}
@@ -156,8 +156,8 @@ func (h *Header) Remove(r Field) {
 func (h *Header) RemoveAllNamed(name string) {
 	i := 0
 	name = strings.ToLower(name)
-	for i < len(h.fields) {
-		if strings.ToLower(h.fields[i].Name()) == name {
+	for i < len(h.Fields) {
+		if strings.ToLower(h.Fields[i].Name()) == name {
 			h.RemoveAt(i)
 		} else {
 			i++
@@ -177,7 +177,7 @@ func (h *Header) Get(key string) string {
 }
 
 func (h *Header) field(fn string, n int) Field {
-	for _, field := range h.fields {
+	for _, field := range h.Fields {
 		if field.Name() == fn {
 			if n > 0 {
 				n--
@@ -348,7 +348,7 @@ func (h *Header) verify() {
 	h.verified = true
 	h.err = nil
 
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		if !f.Valid() {
 			h.err = fmt.Errorf("%s: %s", f.Name(), f.Error())
 			return
@@ -356,7 +356,7 @@ func (h *Header) verify() {
 	}
 
 	occurrences := make(map[string]int)
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		occurrences[f.Name()]++
 	}
 
@@ -555,7 +555,7 @@ func (h *Header) Repair() {
 	// (Duplication has been observed for Date/Subject/M-V/C-T-E/C-T/M-I.)
 
 	occurrences := make(map[string]int)
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		occurrences[f.Name()]++
 	}
 
@@ -566,10 +566,10 @@ func (h *Header) Repair() {
 			n := 0
 			j := 0
 			hf := h.field(conditions[i].name, 0)
-			for j < len(h.fields) {
-				if h.fields[j].Name() == conditions[i].name {
+			for j < len(h.Fields) {
+				if h.Fields[j].Name() == conditions[i].name {
 					n++
-					if n > 1 && hf.rfc822(false) == h.fields[j].rfc822(false) {
+					if n > 1 && hf.rfc822(false) == h.Fields[j].rfc822(false) {
 						h.RemoveAt(j)
 					} else {
 						j++
@@ -612,8 +612,8 @@ func (h *Header) Repair() {
 		}
 		if good != nil && !bad {
 			i := 0
-			for i < len(h.fields) {
-				if h.fields[i].Name() == ContentTypeFieldName && h.fields[i] != good {
+			for i < len(h.Fields) {
+				if h.Fields[i].Name() == ContentTypeFieldName && h.Fields[i] != good {
 					h.RemoveAt(i)
 				} else {
 					i++
@@ -650,7 +650,7 @@ func (h *Header) Repair() {
 				name == ContentTypeFieldName ||
 				name == ReferencesFieldName) {
 			var firstValid Field
-			for _, f := range h.fields {
+			for _, f := range h.Fields {
 				if f.Name() == name && f.Valid() {
 					firstValid = f
 					break
@@ -662,9 +662,9 @@ func (h *Header) Repair() {
 					alsoValid = false
 				}
 				i := 0
-				for i < len(h.fields) {
-					if h.fields[i].Name() == name && h.fields[i] != firstValid &&
-						(alsoValid || !h.fields[i].Valid()) {
+				for i < len(h.Fields) {
+					if h.Fields[i].Name() == name && h.Fields[i] != firstValid &&
+						(alsoValid || !h.Fields[i].Valid()) {
 						h.RemoveAt(i)
 					} else {
 						i++
@@ -733,7 +733,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 	// Duplicated from above.
 	occurrences := make(map[string]int)
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		occurrences[f.Name()]++
 	}
 
@@ -744,10 +744,10 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			n := 0
 			j := 0
 			hf := h.field(conditions[i].name, 0)
-			for j < len(h.fields) {
-				if h.fields[j].Name() == conditions[i].name {
+			for j < len(h.Fields) {
+				if h.Fields[j].Name() == conditions[i].name {
 					n++
-					if n > 1 && hf.rfc822(false) == h.fields[j].rfc822(false) {
+					if n > 1 && hf.rfc822(false) == h.Fields[j].rfc822(false) {
 						h.RemoveAt(j)
 					} else {
 						j++
@@ -768,7 +768,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			!h.field(DateFieldName, 0).Valid() ||
 			h.Date() != nil) {
 		var date *time.Time
-		for _, f := range h.fields {
+		for _, f := range h.Fields {
 			// First, we take the date from the oldest plausible
 			// Received field.
 			if f.Name() == ReceivedFieldName {
@@ -868,7 +868,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			// if there is an X-From-Line, it could be old damaged
 			// gnus mail, fcc'd before a From line was added. Let's
 			// try.
-			for _, f := range h.fields {
+			for _, f := range h.Fields {
 				if f.Name() == "X-From-Line" {
 					ap := NewAddressParser(section(f.rfc822(false), " ", 1))
 					ap.assertSingleAddress()
@@ -892,7 +892,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			!h.field(FromFieldName, 0).Valid() &&
 				len(h.Addresses(FromFieldName)) == 0) {
 		a := []Address{}
-		for _, f := range h.fields {
+		for _, f := range h.Fields {
 			if f.Name() == "Return-Receipt-To" ||
 				f.Name() == "Disposition-Notification-To" {
 				ap := NewAddressParser(section(f.rfc822(false), " ", 1))
@@ -917,8 +917,8 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	if occurrences[ReceivedFieldName] > 0 {
 		bad := false
 		i := 0
-		for i < len(h.fields) {
-			if h.fields[i].Name() == ReceivedFieldName {
+		for i < len(h.Fields) {
+			if h.Fields[i].Name() == ReceivedFieldName {
 				if !h.Valid() {
 					bad = true
 				}
@@ -943,12 +943,12 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		occurrences[ContentIDFieldName] > 0 ||
 		occurrences[MessageIDFieldName] > 0 {
 		i := 0
-		for i < len(h.fields) {
-			if (h.fields[i].Name() == ContentLocationFieldName ||
-				h.fields[i].Name() == ContentDispositionFieldName ||
-				h.fields[i].Name() == ContentIDFieldName ||
-				h.fields[i].Name() == MessageIDFieldName) &&
-				!h.fields[i].Valid() {
+		for i < len(h.Fields) {
+			if (h.Fields[i].Name() == ContentLocationFieldName ||
+				h.Fields[i].Name() == ContentDispositionFieldName ||
+				h.Fields[i].Name() == ContentIDFieldName ||
+				h.Fields[i].Name() == MessageIDFieldName) &&
+				!h.Fields[i].Valid() {
 				h.RemoveAt(i)
 			} else {
 				i++
@@ -963,7 +963,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 	if occurrences[SenderFieldName] > 1 {
 		var good *AddressField
 		from := h.addressField(FromFieldName, 0)
-		for _, f := range h.fields {
+		for _, f := range h.Fields {
 			if f.Name() == SenderFieldName {
 				if f.Valid() && good == nil {
 					candidate := f.(*AddressField)
@@ -978,8 +978,8 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		}
 		if good != nil {
 			i := 0
-			for i < len(h.fields) {
-				if h.fields[i].Name() == SenderFieldName && h.fields[i] != good {
+			for i < len(h.Fields) {
+				if h.Fields[i].Name() == SenderFieldName && h.Fields[i] != good {
 					h.RemoveAt(i)
 				} else {
 					i++
@@ -1000,7 +1000,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 	if occurrences[SubjectFieldName] > 1 {
 		bad := []Field{}
-		for _, s := range h.fields {
+		for _, s := range h.Fields {
 			if s.Name() == SubjectFieldName {
 				v := s.Value()
 				b := false
@@ -1036,8 +1036,8 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			}
 			i := 0
 			seen := false
-			for i < len(h.fields) {
-				s := h.fields[i]
+			for i < len(h.Fields) {
+				s := h.Fields[i]
 				if s.Name() == SubjectFieldName {
 					if seen {
 						h.RemoveAt(i)
@@ -1152,7 +1152,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 			seenReceived := false
 			seenOther := false
 			unbrokenReceived := true
-			for _, f := range h.fields {
+			for _, f := range h.Fields {
 				if f.Name() == ReceivedFieldName {
 					if seenOther {
 						unbrokenReceived = false // rcvd, other, then rcvd
@@ -1214,9 +1214,9 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		}
 		if plain && !html && keep != nil {
 			i := 0
-			for i < len(h.fields) {
-				if h.fields[i].Name() == ContentTypeFieldName &&
-					h.fields[i] != keep {
+			for i < len(h.Fields) {
+				if h.Fields[i].Name() == ContentTypeFieldName &&
+					h.Fields[i] != keep {
 					h.RemoveAt(i)
 				} else {
 					i++
@@ -1601,10 +1601,10 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 
 	if h.field(ContentBaseFieldName, 0) != nil || h.field(ContentLocationFieldName, 0) != nil {
 		i := 0
-		for i < len(h.fields) {
-			if !h.fields[i].Valid() &&
-				(h.fields[i].Name() == ContentBaseFieldName ||
-					h.fields[i].Name() == ContentLocationFieldName) {
+		for i < len(h.Fields) {
+			if !h.Fields[i].Valid() &&
+				(h.Fields[i].Name() == ContentBaseFieldName ||
+					h.Fields[i].Name() == ContentLocationFieldName) {
 				h.RemoveAt(i)
 			} else {
 				i++
@@ -1618,9 +1618,9 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 // Returns the canonical text representation of this Header.  Downgrades rather
 // than including UTF-8 if \a avoidUTF8 is true.
 func (h *Header) AsText(avoidUTF8 bool) string {
-	buf := bytes.NewBuffer(make([]byte, 0, len(h.fields)*100))
+	buf := bytes.NewBuffer(make([]byte, 0, len(h.Fields)*100))
 
-	for _, f := range h.fields {
+	for _, f := range h.Fields {
 		h.appendField(buf, f, avoidUTF8)
 	}
 
