@@ -12,13 +12,13 @@ type Part struct {
 	message *Message
 	parent  *Part
 
-	Header *Header
-	Parts  []*Part
-	Number int
+	Header *Header `json:"header"`
+	Parts  []*Part `json:"parts,omitempty"`
+	Number int     `json:"-"`
 
 	hasText bool
-	Text    string
-	Data    string
+	Text    string `json:"text,omitempty"`
+	Data    string `json:"data,omitempty"`
 
 	numBytes        int
 	numEncodedBytes int

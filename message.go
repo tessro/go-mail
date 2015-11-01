@@ -9,8 +9,8 @@ const crlf = "\015\012"
 
 type Message struct {
 	*Part
-	RFC822Size   int
-	InternalDate int
+	RFC822Size   int `json:"size"`
+	InternalDate int `json:"-"`
 }
 
 func NewMessage() *Message {

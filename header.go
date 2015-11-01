@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"encoding/json"
 )
 
 type headerMode int
@@ -32,6 +34,36 @@ type Header struct {
 
 	err      error
 	verified bool
+}
+
+func (h *Header) MarshalJSON() ([]byte, error) {
+	hs := make([]map[string]interface{}, 0, 8)
+	for _, f := range h.Fields {
+		h := make(map[string]interface{})
+		h["name"] = f.Name()
+		h["value"] = f.Value()
+		hs = append(hs, h)
+	}
+	return json.Marshal(hs)
+}
+
+func (h *Header) UnmarshalJSON(data []byte) error {
+	hs := make([]map[string]interface{}, 0, 8)
+	err := json.Unmarshal(data, &hs)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range hs {
+		// TODO: Should we handle failed type assertions differently?
+		name, ok := f["name"].(string)
+		value, ok := f["value"].(string)
+		if ok {
+			h.Add(name, value)
+		}
+	}
+
+	return nil
 }
 
 func ReadHeader(rfc5322 string, m headerMode) (h *Header, err error) {
