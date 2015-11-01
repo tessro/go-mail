@@ -345,6 +345,14 @@ func (h *Header) MessageID() string {
 	return fmt.Sprintf("<%s@%s>", id.Localpart, id.Domain)
 }
 
+func (h *Header) ToMap() map[string][]string {
+	headers := make(map[string][]string)
+	for _, f := range h.Fields {
+		headers[f.Name()] = append(headers[f.Name()], f.Value())
+	}
+	return headers
+}
+
 type HeaderFieldCondition struct {
 	name     string
 	min, max int
