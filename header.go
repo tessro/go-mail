@@ -1589,7 +1589,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		cte := h.ContentTransferEncoding()
 		cte2 := h.field(ContentTransferEncodingFieldName, 1)
 		if cte != nil && (cte2 != nil || !cte.Valid()) {
-			minl := math.MaxInt32
+			minl := math.MaxInt32 - 1
 			maxl := 0
 			i := 0
 			l := 0
