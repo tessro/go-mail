@@ -53,11 +53,11 @@ func (m *Message) Parse(rfc5322 string) error {
 // If \a avoidUTF8 is true, this function loses information rather than
 // including UTF-8 in the result.
 func (m *Message) RFC822(avoidUTF8 bool) string {
-	var buf *bytes.Buffer
+	var buf strings.Builder
 	if m.RFC822Size > 0 {
-		buf = bytes.NewBuffer(make([]byte, 0, m.RFC822Size))
+		buf.Grow(m.RFC822Size)
 	} else {
-		buf = bytes.NewBuffer(make([]byte, 0, 50000))
+		buf.Grow(50000)
 	}
 
 	buf.WriteString(m.Header.AsText(avoidUTF8))
