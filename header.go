@@ -3,6 +3,7 @@ package mail
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -1588,7 +1589,7 @@ func (h *Header) RepairWithBody(p *Part, body string) {
 		cte := h.ContentTransferEncoding()
 		cte2 := h.field(ContentTransferEncodingFieldName, 1)
 		if cte != nil && (cte2 != nil || !cte.Valid()) {
-			minl := 1 << 31 // 32-bit int max
+			minl := math.MaxInt32 - 1
 			maxl := 0
 			i := 0
 			l := 0
